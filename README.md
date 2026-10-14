@@ -69,6 +69,24 @@ The same key also powers the text fallback screen used when neither app is insta
 - **Starting the question with "Grok bot, …" or "Grok, …"** overrides everything. The prefix is removed before sending.
 - **The widget's Bot button** (shown when Grok Bot is installed) always asks Grok Bot.
 
+### Messaging a specific Grok Bot by voice
+
+Say **"Hey Grok Bot, tell Android Dev the build worked"**. The verbs *tell / ask / message / text / ping* all work. Hey Grok then opens that Bot's chat in the Grok Bot app and copies "the build worked" to the clipboard ("Message copied, paste to send"). **Nothing is ever sent for you.**
+
+- **Setup:** add Bots under **Settings → Grok Bot contacts**: the name you'll say, plus the agent link or id.
+  - On desktop, copy the Bot's link (`grokbot://app/v1/agent?id=…`); pasting the full link is fine.
+  - I haven't found a way to see an agent id in the Android app.
+- **Matching** is loose: case, punctuation, "android-dev" vs "androiddev", and small mis-hearings.
+- **This also works** from the overlay when you start with "Grok bot, tell …".
+- **It doesn't apply in Grok Voice mode** (a saved xAI key), because that mode never produces a transcript to route.
+
+What Grok Bot for Android (1.14.1) accepts, read from its `AndroidManifest.xml`:
+- `VIEW` on the `grokbot:` scheme (any host or path);
+- verified app links for `https://x.ai/bot/agent/…`, `/bot/plugin/…` and `/bot/<21-char template id>`;
+- `SEND` with `text/plain`.
+
+No parameter for prefilled text is documented, which is why the message goes on the clipboard. If the agent link doesn't open, Hey Grok falls back to sharing just the message into Grok Bot with `SEND`.
+
 **Android restrictions this works around** (from the official Android docs):
 - Only widget and notification interactions, or an app providing the `VoiceInteractionService`, may start a **microphone** service without a visible screen. Quick Settings tile clicks may not.
 - Starting another app's activity from the background is blocked unless the system binds one of our services, such as the assistant's `VoiceInteractionService`.
@@ -88,7 +106,7 @@ the recognizer callbacks (`stt[on-device]: onReadyForSpeech`, `onPartialResults`
 and `router: …`. If the on-device recognizer fails (for example, the language pack isn't downloaded), the app
 retries with the default recognizer. If nothing is heard within 12 s, it goes back to wake-word listening and
 the error appears on the main screen.
-Other tags in the same log: `assist:` (assistant session), `overlay:`, `tile:`, `widget:`, `role:`, `mic:`, `settings: launch target` (wake word paused/resumed for a one-shot question) and `recog-proxy:`.
+Other tags in the same log: `assist:` (assistant session), `overlay:`, `tile:`, `widget:`, `role:`, `mic:`, `settings: launch target`, `router: bot message` (wake word paused/resumed for a one-shot question) and `recog-proxy:`.
 
 On Pixels, speech recognition comes from Speech Services by Google / Android System Intelligence. If recognition never
 starts, make sure that app is updated and the offline language pack for your language is downloaded.

@@ -1,8 +1,14 @@
 package dev.glinesb.heygrok.router
 
+import android.content.ClipData
+import android.content.ClipboardManager
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.net.Uri
+import android.os.Handler
+import android.os.Looper
+import android.widget.Toast
 import dev.glinesb.heygrok.HgLog
 import dev.glinesb.heygrok.settings.SecureSettings
 import dev.glinesb.heygrok.ui.ResultActivity
@@ -33,6 +39,7 @@ class AppRouter(private val context: Context) {
 
     fun route(question: String, phrase: WakePhrase) {
         if (SecureSettings(context).alwaysAnswerInApp) { showFallback(question); return }
+        if (phrase == WakePhrase.HEY_GROK_BOT && isInstalled(GROK_BOT.packageName) && tryBotMessage(question)) return
         val ordered = if (phrase == WakePhrase.HEY_GROK_BOT) listOf(GROK_BOT, GROK) else listOf(GROK, GROK_BOT)
         val target = ordered.firstOrNull { isInstalled(it.packageName) }
         when {
@@ -40,6 +47,28 @@ class AppRouter(private val context: Context) {
             target != null && tryLaunch(target) -> Unit
             else -> showFallback(question)
         }
+    }
+
+    /**
+     * "tell <bot> <message>": open that bot's chat via grokbot://app/v1/agent?id=… and put the message on the
+     * clipboard. ai.x.grok.bot exposes no prefill parameter, so we never send anything ourselves.
+     * Falls back to ACTION_SEND of just the message if the link doesn't resolve.
+     */
+    private fun tryBotMessage(question: String): Boolean {
+        val parsed = BotMessage.parse(question, SecureSettings(context).botContacts) ?: return false
+        HgLog.i("router: bot message → '${parsed.contact.name}' (${parsed.message.length} chars)")
+        val view = Intent(Intent.ACTION_VIEW, Uri.parse(BotMessage.agentLink(parsed.contact.agentId)))
+            .setPackage(GROK_BOT.packageName).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        if (view.resolveActivity(context.packageManager) != null && start(view)) {
+            val cm = context.getSystemService(ClipboardManager::class.java)
+            cm.setPrimaryClip(ClipData.newPlainText("Message for ${parsed.contact.name}", parsed.message))
+            Handler(Looper.getMainLooper()).post {
+                Toast.makeText(context.applicationContext, "Message copied, paste to send", Toast.LENGTH_LONG).show()
+            }
+            return true
+        }
+        HgLog.w("router: agent link didn't resolve → ACTION_SEND of the message")
+        return trySend(GROK_BOT, parsed.message)
     }
 
     private fun trySend(target: Target, question: String): Boolean {

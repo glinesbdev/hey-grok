@@ -20,6 +20,8 @@ import androidx.compose.ui.unit.dp
 import dev.glinesb.heygrok.HgLog
 import dev.glinesb.heygrok.assist.AssistantRole
 import dev.glinesb.heygrok.assist.LaunchTarget
+import dev.glinesb.heygrok.router.BotContact
+import dev.glinesb.heygrok.router.BotMessage
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.ui.semantics.Role
 
@@ -59,6 +61,26 @@ class SettingsActivity : ComponentActivity() {
                                 Spacer(Modifier.width(12.dp)); Text(t.label)
                             }
                         }
+                        HorizontalDivider()
+                        Text("Grok Bot contacts", style = MaterialTheme.typography.titleMedium)
+                        Text("Say \"Hey Grok Bot, tell <name> <message>\" to open that Bot's chat with the message copied. You paste and send it yourself. Agent id: paste the Bot's link from the Grok Bot desktop app (grokbot://app/v1/agent?id=…) or just the id.")
+                        var bots by remember { mutableStateOf(settings.botContacts) }
+                        bots.forEach { b ->
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Column(Modifier.weight(1f)) { Text(b.name); Text(b.agentId, style = MaterialTheme.typography.bodySmall) }
+                                TextButton(onClick = { bots = bots - b; settings.botContacts = bots; HgLog.i("settings: removed bot contact") }) { Text("Remove") }
+                            }
+                        }
+                        var botName by remember { mutableStateOf("") }
+                        var botId by remember { mutableStateOf("") }
+                        val parsedId = BotMessage.extractAgentId(botId)
+                        OutlinedTextField(botName, { botName = it }, label = { Text("Name you'll say, e.g. Android Dev") }, singleLine = true, modifier = Modifier.fillMaxWidth())
+                        OutlinedTextField(botId, { botId = it }, label = { Text("Agent link or id") }, singleLine = true, modifier = Modifier.fillMaxWidth(),
+                            isError = botId.isNotBlank() && parsedId == null)
+                        Button(enabled = botName.isNotBlank() && parsedId != null, onClick = {
+                            bots = bots.filterNot { it.name.equals(botName.trim(), true) } + BotContact(botName.trim(), parsedId!!)
+                            settings.botContacts = bots; botName = ""; botId = ""; HgLog.i("settings: added bot contact (${bots.size} total)")
+                        }) { Text("Add Bot") }
                         HorizontalDivider()
                         Text("Default digital assistant", style = MaterialTheme.typography.titleMedium)
                         var held by remember { mutableStateOf(AssistantRole.isHeld(this@SettingsActivity)) }

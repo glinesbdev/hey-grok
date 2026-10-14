@@ -2,6 +2,8 @@ package dev.glinesb.heygrok.settings
 
 import dev.glinesb.heygrok.assist.LaunchTarget
 import dev.glinesb.heygrok.router.AppRouter
+import dev.glinesb.heygrok.router.BotContact
+import dev.glinesb.heygrok.router.BotMessage
 import android.content.Context
 import android.content.SharedPreferences
 import androidx.security.crypto.EncryptedSharedPreferences
@@ -39,6 +41,11 @@ class SecureSettings(private val context: Context) {
         }
         set(v) = prefs.edit().putString(KEY_TARGET, v.name).apply()
 
+    /** Spoken name → Grok Bot agent id, for "Hey Grok Bot, tell <name> <message>". */
+    var botContacts: List<BotContact>
+        get() = BotMessage.decode(prefs.getString(KEY_BOTS, null))
+        set(v) = prefs.edit().putString(KEY_BOTS, BotMessage.encode(v)).apply()
+
     var voice: String
         get() = prefs.getString(KEY_VOICE, DEFAULT_VOICE) ?: DEFAULT_VOICE
         set(v) = prefs.edit().putString(KEY_VOICE, v).apply()
@@ -47,6 +54,7 @@ class SecureSettings(private val context: Context) {
         private const val FILE = "secure_settings"
         private const val KEY_API = "xai_api_key"
         private const val KEY_VOICE = "voice"
+        private const val KEY_BOTS = "bot_contacts"
         private const val KEY_TARGET = "launch_target"
         private const val KEY_IN_APP = "always_answer_in_app"
         const val DEFAULT_VOICE = "eve"
