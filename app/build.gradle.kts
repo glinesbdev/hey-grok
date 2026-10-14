@@ -21,7 +21,6 @@ android {
         targetSdk = 35
         versionCode = 1
         versionName = "0.1.0"
-        buildConfigField("String", "PICOVOICE_ACCESS_KEY", "\"${secret("PICOVOICE_ACCESS_KEY")}\"")
         buildConfigField("String", "XAI_API_KEY", "\"${secret("XAI_API_KEY")}\"")
     }
     buildFeatures { compose = true; buildConfig = true }
@@ -30,6 +29,8 @@ android {
         targetCompatibility = JavaVersion.VERSION_17
     }
     kotlinOptions { jvmTarget = "17" }
+    androidResources { noCompress += "onnx" }
+    testOptions { unitTests.isReturnDefaultValues = true }
 }
 
 dependencies {
@@ -40,6 +41,14 @@ dependencies {
     implementation("androidx.lifecycle:lifecycle-runtime-compose:2.8.7")
     implementation("androidx.compose.ui:ui")
     implementation("androidx.compose.material3:material3")
-    implementation("ai.picovoice:porcupine-android:3.0.3")
+    implementation("com.microsoft.onnxruntime:onnxruntime-android:1.20.0")
+    testImplementation("junit:junit:4.13.2")
+    // Desktop ONNX Runtime (same ai.onnxruntime API) so the pipeline runs in JVM unit tests.
+    testImplementation("com.microsoft.onnxruntime:onnxruntime:1.20.0")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.9.0")
+}
+
+// Use desktop ONNX Runtime natives on the JVM test classpath instead of the Android AAR.
+configurations.matching { it.name.endsWith("UnitTestRuntimeClasspath") }.configureEach {
+    exclude(group = "com.microsoft.onnxruntime", module = "onnxruntime-android")
 }

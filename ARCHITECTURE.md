@@ -4,7 +4,7 @@
 flowchart TD
     UI[MainActivity<br/>permissions + toggle] -->|startForegroundService<br/>while visible| SVC
     subgraph SVC[WakeWordService · FGS type=microphone]
-        WW[WakeWordEngine<br/>Porcupine on-device<br/>"Hey Grok" / "Hey Grok Bot"]
+        WW[OpenWakeWordEngine<br/>AudioRecord 16 kHz → melspec → embedding → keyword ONNX<br/>"Hey Grok" / "Hey Grok Bot"]
     end
     WW -->|wake + phrase| STT[SpeechCapture<br/>Android SpeechRecognizer]
     STT -->|question text| R[AppRouter]
@@ -23,9 +23,13 @@ flowchart TD
    a microphone FGS can only be started while the app is visible and `RECORD_AUDIO`
    is granted, so the user starts it from `MainActivity`. It is `START_NOT_STICKY`
    on purpose, because a background restart would break that rule.
-2. **On-device wake word.** `WakeWordEngine` is an interface. `PorcupineWakeWordEngine`
-   loads custom `.ppn` models (“Hey Grok”, “Hey Grok Bot”). No audio leaves the device
-   until the wake word is detected. openWakeWord could be dropped in later as a free alternative.
+2. **On-device wake word.** `WakeWordEngine` is an interface. `OpenWakeWordEngine` reads 16 kHz
+   mono PCM with `AudioRecord` and feeds 80 ms frames to `OwwPipeline`, a Kotlin port of
+   openWakeWord's streaming features: `melspectrogram.onnx` → `embedding_model.onnx` (96-d every
+   80 ms) → the last 16 embeddings go to the `hey_grok.onnx` and `hey_grok_bot.onnx` classifiers on
+   ONNX Runtime Mobile. "Hey grok" is a prefix of "hey grok bot", so `WakeDecider` waits about
+   640 ms after "hey grok" fires to see whether the bot model fires too. No audio leaves the device
+   until a wake word is detected. Models and metrics are in MODELS.md.
 3. **Speech-to-text.** On wake, the engine releases the mic and `SpeechCapture` runs
    `SpeechRecognizer` (on-device when available, API 31+) once to get the question.
    Then wake-word listening resumes.
@@ -39,7 +43,7 @@ flowchart TD
 - **System DSP hotword is privileged-only.** `AlwaysOnHotwordDetector` and
   `HotwordDetectionService` (the low-power path “Hey Google” uses) need
   `CAPTURE_AUDIO_HOTWORD` / `MANAGE_HOTWORD_DETECTION`, which are signature/privileged
-  permissions. A Play Store app can’t use them, which is why we run Porcupine on the CPU
+  permissions. A Play Store app can’t use them, which is why we run openWakeWord on the CPU
   in a foreground service. Expect more battery use than with “Hey Google”.
 - **Background activity starts.** Android 10+ blocks a service from starting an
   activity in the background, and having an FGS doesn’t exempt you. Handing off works

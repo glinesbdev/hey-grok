@@ -35,7 +35,7 @@ class WakeWordService : Service() {
 
     override fun onCreate() {
         super.onCreate()
-        engine = PorcupineWakeWordEngine(this)
+        engine = OpenWakeWordEngine(this)
         speech = SpeechCapture(this)
         router = AppRouter(this)
     }

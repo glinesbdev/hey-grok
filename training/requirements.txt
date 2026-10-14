@@ -1,0 +1,8 @@
+piper-tts==1.8.0
+openwakeword==0.4.0
+onnxruntime
+onnx
+torch
+numpy
+scipy
+soundfile

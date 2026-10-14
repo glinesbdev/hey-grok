@@ -4,8 +4,8 @@ package dev.glinesb.heygrok.wake
 enum class WakePhrase { HEY_GROK, HEY_GROK_BOT }
 
 /**
- * Abstraction over an on-device wake-word engine so Porcupine can be swapped
- * for openWakeWord (or anything else) later.
+ * Abstraction over an on-device wake-word engine (openWakeWord today) so it can be swapped
+ * for another engine later.
  */
 interface WakeWordEngine {
     /** Begin listening on the microphone. [onWake] is invoked on detection. */
