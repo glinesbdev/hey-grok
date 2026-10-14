@@ -6,6 +6,7 @@ import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
 import android.graphics.PixelFormat
+import android.os.Build
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
@@ -52,9 +53,18 @@ object ListeningPopup {
     private var ending: Phase? = null
     @Volatile var last: Model? = null; private set
 
-    private const val TIMEOUT_MS = 30_000L
-    private val timeout = Runnable { HgLog.w("popup: safety timeout"); dismiss() }
-    private val dismissRunnable = Runnable { dismiss() }
+    /** Max idle time after capture ends without routing. Recognition itself is capped by SpeechCapture (60 s since last speech). */
+    private const val TIMEOUT_MS = 60_000L
+    /** Safety net only: re-arms while recognition is active, so it can't cut the user off. */
+    private val timeout: Runnable = object : Runnable {
+        override fun run() {
+            if (AppState.state.value.capturing) { HgLog.d("popup: safety timer deferred (still capturing)"); main.postDelayed(this, TIMEOUT_MS); return }
+            HgLog.w("popup: safety timeout"); dismiss()
+        }
+    }
+    private val dismissRunnable: Runnable = object : Runnable {
+        override fun run() { if (AppState.state.value.capturing) main.postDelayed(this, 500) else dismiss() }
+    }
 
     fun start(context: Context, phrase: WakePhrase) = main.post {
         dismiss()
@@ -92,6 +102,7 @@ object ListeningPopup {
         render(model(st))
         HgLog.i("popup: end ($ending)")
         main.removeCallbacks(dismissRunnable)
+        if (AppState.state.value.capturing) HgLog.w("popup: end() while still capturing; dismiss waits for capture")
         main.postDelayed(dismissRunnable, if (ending == Phase.ERROR) 1_800L else 900L)
     }
 
@@ -127,8 +138,9 @@ object ListeningPopup {
         private val card = PopupCardView(c)
         private val frame = android.widget.FrameLayout(c).apply {
             val m = (12 * c.resources.displayMetrics.density).toInt()
-            addView(card, android.widget.FrameLayout.LayoutParams(-1, -2).apply { setMargins(m, m, m, m * 4) })
+            addView(card, android.widget.FrameLayout.LayoutParams(-1, -2))
             setOnClickListener { dismiss() }
+            applyPopupInsets("bubble")
         }
         override fun show() {
             wm.addView(frame, WindowManager.LayoutParams(
@@ -136,7 +148,12 @@ object ListeningPopup {
                 WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
                 WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL,
                 PixelFormat.TRANSLUCENT,
-            ).apply { gravity = Gravity.BOTTOM; windowAnimations = android.R.style.Animation_InputMethod })
+            ).apply {
+                gravity = Gravity.BOTTOM; windowAnimations = android.R.style.Animation_InputMethod
+                // lay out under the system bars and pad ourselves (see applyPopupInsets)
+                if (Build.VERSION.SDK_INT >= 30) { fitInsetsTypes = 0; layoutInDisplayCutoutMode = WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_ALWAYS }
+                else flags = flags or WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN or WindowManager.LayoutParams.FLAG_LAYOUT_INSET_DECOR
+            })
         }
         override fun render(m: Model) = card.render(m)
         override fun dismiss() { if (frame.isAttachedToWindow) wm.removeView(frame) }
@@ -170,7 +187,7 @@ object ListeningPopup {
                 .setStyle(NotificationCompat.BigTextStyle().bigText(text))
                 .setPriority(NotificationCompat.PRIORITY_HIGH).setCategory(NotificationCompat.CATEGORY_STATUS)
                 .setOnlyAlertOnce(true).setSilent(false).setOngoing(m.phase == Phase.LISTENING)
-                .setTimeoutAfter(TIMEOUT_MS).setContentIntent(open).build()
+                .setTimeoutAfter(TIMEOUT_MS * 3).setContentIntent(open).build()
             try { nm.notify(NOTIF_ID, n) } catch (e: SecurityException) { HgLog.w("popup: no notification permission", e) }
         }
         override fun dismiss() = nm.cancel(NOTIF_ID)

@@ -14,7 +14,32 @@ import android.view.Gravity
 import android.view.View
 import android.widget.LinearLayout
 import android.widget.TextView
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowInsetsCompat
+import dev.glinesb.heygrok.HgLog
 import kotlin.math.sin
+
+/**
+ * Pads a bottom pop-up container clear of the nav bar (3-button or gesture), gesture areas, display
+ * cutout and keyboard, plus a 12 dp margin. Works in portrait and landscape (side nav bar / cutout).
+ */
+fun View.applyPopupInsets(tag: String) {
+    val m = (12 * resources.displayMetrics.density).toInt()
+    ViewCompat.setOnApplyWindowInsetsListener(this) { v, insets ->
+        val i = insets.getInsets(
+            WindowInsetsCompat.Type.navigationBars() or WindowInsetsCompat.Type.systemGestures() or
+                WindowInsetsCompat.Type.displayCutout() or WindowInsetsCompat.Type.ime()
+        )
+        v.setPadding(i.left + m, m, i.right + m, i.bottom + m)
+        HgLog.d("popup[$tag]: insets l=${i.left} r=${i.right} b=${i.bottom}")
+        insets
+    }
+    if (isAttachedToWindow) ViewCompat.requestApplyInsets(this)
+    else addOnAttachStateChangeListener(object : View.OnAttachStateChangeListener {
+        override fun onViewAttachedToWindow(v: View) { ViewCompat.requestApplyInsets(v) }
+        override fun onViewDetachedFromWindow(v: View) {}
+    })
+}
 
 /** System-theme colours: Material You (dynamic) on Android 12+, static fallback below. */
 internal data class Palette(val bg: Int, val fg: Int, val sub: Int, val accent: Int, val onAccent: Int) {

@@ -27,7 +27,9 @@ class QuestionFlow(private val context: Context, private val source: String) {
     fun run(phrase: WakePhrase, onDone: () -> Unit, deliver: ((String) -> Unit)? = null) {
         val key = settings.apiKey
         HgLog.i("flow[$source]: start ($phrase, mode=${if (key != null) "grok-voice" else "stt"})")
-        if (key != null) { runVoice(key, onDone); return }
+        AppState.update { it.copy(capturing = true) }
+        val done = { AppState.update { it.copy(capturing = false) }; onDone() }
+        if (key != null) { runVoice(key, done); return }
         AppState.update { it.copy(status = "Starting speech recognizer…", partial = null, sendingTo = null) }
         speech.capture(object : SpeechCapture.Callback {
             override fun onListening(engine: String) =
@@ -35,16 +37,17 @@ class QuestionFlow(private val context: Context, private val source: String) {
             override fun onPartial(text: String) = AppState.update { it.copy(partial = text) }
             override fun onRms(db: Float) = AppState.update { it.copy(rms = db) }
             override fun onResult(text: String) {
+                AppState.update { it.copy(capturing = false) }
                 if (deliver != null) { HgLog.i("flow[$source]: transcript='$text' → caller"); deliver(text); return }
                 HgLog.i("flow[$source]: question='$text' → routing")
                 AppState.update { it.copy(lastQuestion = text, partial = null, status = "Routing…") }
                 AppRouter(context).route(text, phrase)
-                onDone()
+                done()
             }
             override fun onError(message: String) {
                 HgLog.w("flow[$source]: speech failed: $message")
                 AppState.update { it.copy(status = "$message — try again", partial = null) }
-                onDone()
+                done()
             }
         })
     }
@@ -64,7 +67,7 @@ class QuestionFlow(private val context: Context, private val source: String) {
         }).also { it.start() }
     }
 
-    fun cancel() { speech.cancel(); voice?.cancel(); voice = null }
+    fun cancel() { speech.cancel(); voice?.cancel(); voice = null; AppState.update { it.copy(capturing = false) } }
 }
 
 /**

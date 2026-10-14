@@ -89,7 +89,9 @@ class AssistActivity : ComponentActivity() {
                     contentAlignment = Alignment.BottomCenter,
                 ) {
                     Card(
-                        Modifier.fillMaxWidth().safeDrawingPadding().padding(12.dp)
+                        Modifier.fillMaxWidth()
+                            .windowInsetsPadding(WindowInsets.safeDrawing.union(WindowInsets.systemGestures.only(WindowInsetsSides.Horizontal + WindowInsetsSides.Bottom)))
+                            .padding(12.dp)
                             .clickable(remember { MutableInteractionSource() }, null) { /* swallow taps */ },
                         shape = RoundedCornerShape(28.dp),
                         elevation = CardDefaults.cardElevation(8.dp),

@@ -76,6 +76,17 @@ It closes on hand-off, on an error, or after 30 s. Which pop-up you get:
 
 **Settings → "Sound & vibration on wake"** (on by default) plays a short tick and haptic when the wake word fires.
 
+### Long questions and pauses
+
+Hey Grok keeps listening while you talk:
+- **Before you speak:** it waits up to 8 s for speech.
+- **Once you're talking:** every partial word or voice-level spike resets its timers.
+- **Short pauses:** if the recognizer ends on a short pause, or on a dangling word like "and…" or "the…", Hey Grok restarts it straight away and appends what you say next. The question ends after about 1.8 s of real silence.
+- **Hard cap:** 60 s without any speech, and 3 min overall.
+- **The pop-up** never closes while recognition is still running.
+
+This applies to the wake word, the overlay, the notification and the bubble. Logs: `stt: timers reset`, `stt: restart #n`, `stt: speech began`. The pop-ups clear the navigation bar (gesture or 3-button), display cutouts and the keyboard, in portrait and landscape.
+
 ### Which app gets the question
 
 - **"Hey Grok" / "Hey Grok Bot"** always go to Grok / Grok Bot respectively.

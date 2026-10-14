@@ -13,6 +13,9 @@ import android.widget.FrameLayout
 import dev.glinesb.heygrok.HgLog
 import dev.glinesb.heygrok.popup.ListeningPopup
 import dev.glinesb.heygrok.popup.PopupCardView
+import dev.glinesb.heygrok.popup.applyPopupInsets
+import android.os.Build
+import androidx.core.view.WindowCompat
 
 /**
  * Our VoiceInteractionService. It's bound by the system while Hey Grok is the default digital
@@ -49,6 +52,11 @@ class HeyGrokSession(context: Context) : VoiceInteractionSession(context) {
             setGravity(Gravity.BOTTOM)
             addFlags(WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL)
             clearFlags(WindowManager.LayoutParams.FLAG_DIM_BEHIND)
+            // Draw under the nav bar / cutout and pad the card ourselves, so gesture and 3-button nav both work.
+            WindowCompat.setDecorFitsSystemWindows(this, false)
+            if (Build.VERSION.SDK_INT >= 30) attributes = attributes.apply {
+                fitInsetsTypes = 0; layoutInDisplayCutoutMode = WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_ALWAYS
+            }
         }
     }
 
@@ -63,10 +71,10 @@ class HeyGrokSession(context: Context) : VoiceInteractionSession(context) {
         val card = PopupCardView(context)
         ListeningPopup.last?.let(card::render)
         compactCard = card
-        val m = (12 * context.resources.displayMetrics.density).toInt()
         return FrameLayout(context).apply {
-            addView(card, FrameLayout.LayoutParams(-1, -2).apply { setMargins(m, m, m, m * 2) })
+            addView(card, FrameLayout.LayoutParams(-1, -2))
             setOnClickListener { hide() }
+            applyPopupInsets("session")
         }
     }
 

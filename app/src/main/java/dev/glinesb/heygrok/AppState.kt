@@ -17,6 +17,8 @@ object AppState {
         val rms: Float = -2f,
         /** Set by AppRouter when it hands off: "Grok", "Grok Bot", "Android Dev (Grok Bot)", "Hey Grok". */
         val sendingTo: String? = null,
+        /** True while a question is being captured (STT or Grok Voice); pop-up timers never fire meanwhile. */
+        val capturing: Boolean = false,
     )
 
     private val _state = MutableStateFlow(State())
