@@ -28,11 +28,12 @@ class QuestionFlow(private val context: Context, private val source: String) {
         val key = settings.apiKey
         HgLog.i("flow[$source]: start ($phrase, mode=${if (key != null) "grok-voice" else "stt"})")
         if (key != null) { runVoice(key, onDone); return }
-        AppState.update { it.copy(status = "Starting speech recognizer…", partial = null) }
+        AppState.update { it.copy(status = "Starting speech recognizer…", partial = null, sendingTo = null) }
         speech.capture(object : SpeechCapture.Callback {
             override fun onListening(engine: String) =
                 AppState.update { it.copy(status = "Speak your question ($engine recognizer)…") }
             override fun onPartial(text: String) = AppState.update { it.copy(partial = text) }
+            override fun onRms(db: Float) = AppState.update { it.copy(rms = db) }
             override fun onResult(text: String) {
                 if (deliver != null) { HgLog.i("flow[$source]: transcript='$text' → caller"); deliver(text); return }
                 HgLog.i("flow[$source]: question='$text' → routing")

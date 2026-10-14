@@ -9,6 +9,7 @@ import android.net.Uri
 import android.os.Handler
 import android.os.Looper
 import android.widget.Toast
+import dev.glinesb.heygrok.AppState
 import dev.glinesb.heygrok.HgLog
 import dev.glinesb.heygrok.settings.SecureSettings
 import dev.glinesb.heygrok.ui.ResultActivity
@@ -38,14 +39,14 @@ class AppRouter(private val context: Context) {
     fun installedTargets(): List<Target> = listOf(GROK, GROK_BOT).filter { isInstalled(it.packageName) }
 
     fun route(question: String, phrase: WakePhrase) {
-        if (SecureSettings(context).alwaysAnswerInApp) { showFallback(question); return }
+        if (SecureSettings(context).alwaysAnswerInApp) { sending("Hey Grok"); showFallback(question); return }
         if (phrase == WakePhrase.HEY_GROK_BOT && isInstalled(GROK_BOT.packageName) && tryBotMessage(question)) return
         val ordered = if (phrase == WakePhrase.HEY_GROK_BOT) listOf(GROK_BOT, GROK) else listOf(GROK, GROK_BOT)
         val target = ordered.firstOrNull { isInstalled(it.packageName) }
         when {
-            target != null && trySend(target, question) -> Unit
-            target != null && tryLaunch(target) -> Unit
-            else -> showFallback(question)
+            target != null && trySend(target, question) -> sending(target.name)
+            target != null && tryLaunch(target) -> sending(target.name)
+            else -> { sending("Hey Grok"); showFallback(question) }
         }
     }
 
@@ -60,6 +61,7 @@ class AppRouter(private val context: Context) {
         val view = Intent(Intent.ACTION_VIEW, Uri.parse(BotMessage.agentLink(parsed.contact.agentId)))
             .setPackage(GROK_BOT.packageName).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
         if (view.resolveActivity(context.packageManager) != null && start(view)) {
+            sending("${parsed.contact.name} (Grok Bot)")
             val cm = context.getSystemService(ClipboardManager::class.java)
             cm.setPrimaryClip(ClipData.newPlainText("Message for ${parsed.contact.name}", parsed.message))
             Handler(Looper.getMainLooper()).post {
@@ -68,8 +70,10 @@ class AppRouter(private val context: Context) {
             return true
         }
         HgLog.w("router: agent link didn't resolve → ACTION_SEND of the message")
-        return trySend(GROK_BOT, parsed.message)
+        return trySend(GROK_BOT, parsed.message).also { if (it) sending("${parsed.contact.name} (Grok Bot)") }
     }
+
+    private fun sending(label: String) { HgLog.i("router: sending to $label"); AppState.update { it.copy(sendingTo = label) } }
 
     private fun trySend(target: Target, question: String): Boolean {
         val send = Intent(Intent.ACTION_SEND).apply {

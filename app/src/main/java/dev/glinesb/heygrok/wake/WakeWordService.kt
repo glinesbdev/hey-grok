@@ -19,6 +19,8 @@ import dev.glinesb.heygrok.MainActivity
 import dev.glinesb.heygrok.assist.AssistantRole
 import dev.glinesb.heygrok.assist.MicCoordinator
 import dev.glinesb.heygrok.assist.QuestionFlow
+import dev.glinesb.heygrok.popup.ListeningPopup
+import dev.glinesb.heygrok.popup.WakeFeedback
 import dev.glinesb.heygrok.widget.WidgetUpdater
 
 /**
@@ -86,7 +88,9 @@ class WakeWordService : Service() {
         // When we hold the assistant role, the system keeps our VoiceInteractionService bound, which
         // lets the hand-off start Grok / Grok Bot even with the app closed (see ARCHITECTURE.md).
         HgLog.i("service: wake $phrase (assistant role held=${AssistantRole.isHeld(this)})")
-        flow = QuestionFlow(this, "wake").also { f -> f.run(phrase, onDone = { flow = null; listenForWakeWord() }) }
+        WakeFeedback.play(this)
+        ListeningPopup.start(this, phrase)
+        flow = QuestionFlow(this, "wake").also { f -> f.run(phrase, onDone = { flow = null; ListeningPopup.end(); listenForWakeWord() }) }
     }
 
     private fun buildNotification(): Notification {
@@ -114,6 +118,7 @@ class WakeWordService : Service() {
     override fun onDestroy() {
         if (MicCoordinator.owner === micOwner) MicCoordinator.owner = null
         flow?.cancel()
+        ListeningPopup.dismiss()
         engine.release()
         AppState.update { it.copy(listening = false, status = "Stopped") }
         WidgetUpdater.refresh(this)

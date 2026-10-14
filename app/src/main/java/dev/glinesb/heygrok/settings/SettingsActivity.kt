@@ -1,6 +1,8 @@
 package dev.glinesb.heygrok.settings
 
 import android.os.Bundle
+import android.net.Uri
+import android.content.Intent
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -28,6 +30,9 @@ import androidx.compose.ui.semantics.Role
 /** Optional Grok Voice mode: enter your own xAI key (stored encrypted) and pick a voice. */
 class SettingsActivity : ComponentActivity() {
     private lateinit var requestRole: () -> Unit
+    private val canOverlay = mutableStateOf(false)
+
+    override fun onResume() { super.onResume(); canOverlay.value = android.provider.Settings.canDrawOverlays(this) }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         requestRole = AssistantRole.registerRequester(this) { HgLog.i("settings: role held=$it") }
@@ -61,6 +66,26 @@ class SettingsActivity : ComponentActivity() {
                                 Spacer(Modifier.width(12.dp)); Text(t.label)
                             }
                         }
+                        HorizontalDivider()
+                        Text("Wake word feedback", style = MaterialTheme.typography.titleMedium)
+                        var fb by remember { mutableStateOf(settings.wakeFeedback) }
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text("Sound & vibration on wake", Modifier.weight(1f))
+                            Switch(checked = fb, onCheckedChange = { fb = it; settings.wakeFeedback = it; HgLog.i("settings: wake feedback=$it") })
+                        }
+                        var bubble by remember { mutableStateOf(settings.overlayBubble) }
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Column(Modifier.weight(1f)) {
+                                Text("Bubble over other apps")
+                                Text("When Hey Grok isn't the default assistant, show the listening card over other apps instead of a notification.",
+                                    style = MaterialTheme.typography.bodySmall)
+                            }
+                            Switch(checked = bubble, onCheckedChange = { bubble = it; settings.overlayBubble = it; HgLog.i("settings: overlay bubble=$it") })
+                        }
+                        if (bubble && !canOverlay.value) OutlinedButton(onClick = {
+                            HgLog.i("settings: requesting Display over other apps")
+                            startActivity(Intent(android.provider.Settings.ACTION_MANAGE_OVERLAY_PERMISSION, Uri.parse("package:$packageName")))
+                        }) { Text("Allow \"Display over other apps\"") }
                         HorizontalDivider()
                         Text("Grok Bot contacts", style = MaterialTheme.typography.titleMedium)
                         Text("Say \"Hey Grok Bot, tell <name> <message>\" to open that Bot's chat with the message copied. You paste and send it yourself. Agent id: paste the Bot's link from the Grok Bot desktop app (grokbot://app/v1/agent?id=…) or just the id.")

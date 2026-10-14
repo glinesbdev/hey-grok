@@ -13,6 +13,10 @@ object AppState {
         val partial: String? = null,
         val lastQuestion: String? = null,
         val lastResult: String? = null,
+        /** Recognizer input level (dB, ~-2…10) for the pop-up mic. */
+        val rms: Float = -2f,
+        /** Set by AppRouter when it hands off: "Grok", "Grok Bot", "Android Dev (Grok Bot)", "Hey Grok". */
+        val sendingTo: String? = null,
     )
 
     private val _state = MutableStateFlow(State())

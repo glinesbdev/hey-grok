@@ -61,6 +61,21 @@ The same key also powers the text fallback screen used when neither app is insta
 | **Quick Settings tile** | Pull down Quick Settings twice → ✏️ **Edit** → drag **Hey Grok** into your tiles | Tap to turn the wake word on or off; the tile shows its state. Without the assistant role, turning it *on* briefly flashes the overlay (Android requires a visible screen to start mic access from a tile). |
 | **Home-screen widget** | Long-press the home screen → **Widgets** → **Hey Grok** → drag it out | 🎙 asks one question right away (opens the overlay). **On/Off** toggles the wake word. Follows Material You colors and light/dark. |
 
+### Listening pop-up (wake word while you're in another app)
+
+After "Hey Grok" fires and Hey Grok isn't on screen, a small pop-up shows what's happening:
+- a mic that pulses with your voice level;
+- the target app (for example "Listening · Grok Bot") and a live transcript;
+- "Sending to Grok…" when the question is handed off.
+
+It closes on hand-off, on an error, or after 30 s. Which pop-up you get:
+
+1. **Hey Grok is the default assistant:** a compact bottom card shown through the assistant session. No extra permission needed.
+2. **Settings → "Bubble over other apps" is on and *Display over other apps* is granted:** the same card as an overlay bubble. It's off by default, and Settings has a button to grant the permission.
+3. **Otherwise:** a heads-up notification ("Listening pop-up" channel, silent) that updates with the transcript. It needs notifications allowed.
+
+**Settings → "Sound & vibration on wake"** (on by default) plays a short tick and haptic when the wake word fires.
+
 ### Which app gets the question
 
 - **"Hey Grok" / "Hey Grok Bot"** always go to Grok / Grok Bot respectively.
@@ -106,7 +121,7 @@ the recognizer callbacks (`stt[on-device]: onReadyForSpeech`, `onPartialResults`
 and `router: …`. If the on-device recognizer fails (for example, the language pack isn't downloaded), the app
 retries with the default recognizer. If nothing is heard within 12 s, it goes back to wake-word listening and
 the error appears on the main screen.
-Other tags in the same log: `assist:` (assistant session), `overlay:`, `tile:`, `widget:`, `role:`, `mic:`, `settings: launch target`, `router: bot message` (wake word paused/resumed for a one-shot question) and `recog-proxy:`.
+Other tags in the same log: `assist:` (assistant session), `overlay:`, `tile:`, `widget:`, `role:`, `mic:`, `settings: launch target`, `router: bot message`, `popup:`, `feedback:` (wake word paused/resumed for a one-shot question) and `recog-proxy:`.
 
 On Pixels, speech recognition comes from Speech Services by Google / Android System Intelligence. If recognition never
 starts, make sure that app is updated and the offline language pack for your language is downloaded.

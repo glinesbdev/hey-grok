@@ -46,6 +46,16 @@ class SecureSettings(private val context: Context) {
         get() = BotMessage.decode(prefs.getString(KEY_BOTS, null))
         set(v) = prefs.edit().putString(KEY_BOTS, BotMessage.encode(v)).apply()
 
+    /** Earcon + haptic when the wake word fires. */
+    var wakeFeedback: Boolean
+        get() = prefs.getBoolean(KEY_FEEDBACK, true)
+        set(v) = prefs.edit().putBoolean(KEY_FEEDBACK, v).apply()
+
+    /** Listening pop-up as a "Display over other apps" bubble when we don't hold the assistant role. */
+    var overlayBubble: Boolean
+        get() = prefs.getBoolean(KEY_BUBBLE, false)
+        set(v) = prefs.edit().putBoolean(KEY_BUBBLE, v).apply()
+
     var voice: String
         get() = prefs.getString(KEY_VOICE, DEFAULT_VOICE) ?: DEFAULT_VOICE
         set(v) = prefs.edit().putString(KEY_VOICE, v).apply()
@@ -54,6 +64,8 @@ class SecureSettings(private val context: Context) {
         private const val FILE = "secure_settings"
         private const val KEY_API = "xai_api_key"
         private const val KEY_VOICE = "voice"
+        private const val KEY_FEEDBACK = "wake_feedback"
+        private const val KEY_BUBBLE = "overlay_bubble"
         private const val KEY_BOTS = "bot_contacts"
         private const val KEY_TARGET = "launch_target"
         private const val KEY_IN_APP = "always_answer_in_app"

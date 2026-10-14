@@ -85,3 +85,12 @@ flowchart TD
   starts the service through the translucent activity (`startActivityAndCollapse`, using `unlockAndRun` when the phone is locked).
 - **Widget.** Glance `HeyGrokWidget`. The toggle uses `actionStartService` (widget interactions are a while-in-use exemption),
   and the mic button opens the overlay. `WidgetUpdater` refreshes the widget and the tile whenever listening starts or stops.
+
+## Listening pop-up
+
+`popup/ListeningPopup` starts on wake (only when no Hey Grok activity is started, using `ProcessLifecycleOwner`). It collects `AppState`: partial text, `rms` from `SpeechRecognizer.onRmsChanged`, and `sendingTo`, which `AppRouter` sets when it hands off. It renders to one surface:
+- **Assistant session:** `HeyGrokInteractionService.instance.showSession({COMPACT})`. `HeyGrokSession` then uses a bottom-anchored, wrap-content, `FLAG_NOT_TOUCH_MODAL` window with a `PopupCardView`.
+- **Overlay bubble:** a `TYPE_APPLICATION_OVERLAY` window, used only when the setting is on and `canDrawOverlays` is true.
+- **Notification:** heads-up on a silent IMPORTANCE_HIGH channel, throttled to about 3 updates/s.
+
+The card uses Material You system colors (`system_accent1_*` / `system_neutral*`) and follows light/dark. A safety timeout closes it after 30 s.

@@ -6,7 +6,13 @@ import android.os.Bundle
 import android.service.voice.VoiceInteractionService
 import android.service.voice.VoiceInteractionSession
 import android.service.voice.VoiceInteractionSessionService
+import android.view.Gravity
+import android.view.View
+import android.view.WindowManager
+import android.widget.FrameLayout
 import dev.glinesb.heygrok.HgLog
+import dev.glinesb.heygrok.popup.ListeningPopup
+import dev.glinesb.heygrok.popup.PopupCardView
 
 /**
  * Our VoiceInteractionService. It's bound by the system while Hey Grok is the default digital
@@ -15,8 +21,13 @@ import dev.glinesb.heygrok.HgLog
  * can open Grok / Grok Bot with the app closed.
  */
 class HeyGrokInteractionService : VoiceInteractionService() {
-    override fun onReady() { super.onReady(); HgLog.i("assist: VoiceInteractionService ready (role held)") }
-    override fun onShutdown() { HgLog.i("assist: VoiceInteractionService shutdown"); super.onShutdown() }
+    override fun onReady() { super.onReady(); instance = this; HgLog.i("assist: VoiceInteractionService ready (role held)") }
+    override fun onShutdown() { HgLog.i("assist: VoiceInteractionService shutdown"); if (instance === this) instance = null; super.onShutdown() }
+
+    companion object {
+        /** Set while the system has us bound as the assistant; used to show the compact wake pop-up. */
+        @Volatile var instance: HeyGrokInteractionService? = null
+    }
 }
 
 class HeyGrokSessionService : VoiceInteractionSessionService() {
@@ -28,13 +39,56 @@ class HeyGrokSessionService : VoiceInteractionSessionService() {
  * follows the system theme), started with startAssistantActivity so it shows above the current app.
  */
 class HeyGrokSession(context: Context) : VoiceInteractionSession(context) {
+    private var compact = false
+
+    override fun onCreate() {
+        super.onCreate()
+        // Bottom-anchored, wrap-content window that lets touches through to the app underneath.
+        window.window?.apply {
+            setLayout(WindowManager.LayoutParams.MATCH_PARENT, WindowManager.LayoutParams.WRAP_CONTENT)
+            setGravity(Gravity.BOTTOM)
+            addFlags(WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL)
+            clearFlags(WindowManager.LayoutParams.FLAG_DIM_BEHIND)
+        }
+    }
+
+    override fun onPrepareShow(args: Bundle?, showFlags: Int) {
+        compact = args?.getBoolean(EXTRA_COMPACT) == true
+        setUiEnabled(compact) // only the compact wake pop-up has its own window content
+        super.onPrepareShow(args, showFlags)
+    }
+
+    override fun onCreateContentView(): View? {
+        if (!compact) return null
+        val card = PopupCardView(context)
+        ListeningPopup.last?.let(card::render)
+        compactCard = card
+        val m = (12 * context.resources.displayMetrics.density).toInt()
+        return FrameLayout(context).apply {
+            addView(card, FrameLayout.LayoutParams(-1, -2).apply { setMargins(m, m, m, m * 2) })
+            setOnClickListener { hide() }
+        }
+    }
+
     override fun onShow(args: Bundle?, showFlags: Int) {
         super.onShow(args, showFlags)
-        HgLog.i("assist: session onShow flags=$showFlags")
+        current = this
+        HgLog.i("assist: session onShow flags=$showFlags compact=$compact")
+        if (compact) return
         runCatching {
             startAssistantActivity(AssistActivity.askIntent(context).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
         }.onFailure { HgLog.e("assist: startAssistantActivity failed", it) }
         hide() // the overlay activity owns the UI from here
     }
-    override fun onHide() { HgLog.d("assist: session onHide"); super.onHide() }
+    override fun onHide() {
+        HgLog.d("assist: session onHide")
+        if (current === this) { current = null; compactCard = null }
+        super.onHide()
+    }
+
+    companion object {
+        const val EXTRA_COMPACT = "dev.glinesb.heygrok.COMPACT"
+        @Volatile var current: HeyGrokSession? = null
+        @Volatile var compactCard: PopupCardView? = null
+    }
 }

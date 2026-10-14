@@ -30,6 +30,7 @@ class SpeechCapture(
     interface Callback {
         fun onListening(engine: String) {}
         fun onPartial(text: String) {}
+        fun onRms(db: Float) {}
         fun onResult(text: String)
         fun onError(message: String)
     }
@@ -89,7 +90,7 @@ class SpeechCapture(
         r.setRecognitionListener(object : RecognitionListener {
             override fun onReadyForSpeech(params: Bundle?) { HgLog.d("stt[$engine]: onReadyForSpeech"); cb.onListening(engine) }
             override fun onBeginningOfSpeech() { gotSpeech = true; HgLog.d("stt[$engine]: onBeginningOfSpeech") }
-            override fun onRmsChanged(rmsdB: Float) {}
+            override fun onRmsChanged(rmsdB: Float) { if (my == session) cb.onRms(rmsdB) }
             override fun onBufferReceived(buffer: ByteArray?) {}
             override fun onEndOfSpeech() { HgLog.d("stt[$engine]: onEndOfSpeech") }
             override fun onPartialResults(partialResults: Bundle?) {
