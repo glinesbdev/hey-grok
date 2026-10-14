@@ -20,6 +20,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import dev.glinesb.heygrok.AppState
+import dev.glinesb.heygrok.router.AppRouter
+import dev.glinesb.heygrok.router.MissingAppButtons
 import dev.glinesb.heygrok.settings.SecureSettings
 import dev.glinesb.heygrok.xai.XaiClient
 
@@ -40,6 +42,8 @@ class ResultActivity : ComponentActivity() {
                     Text(question, style = MaterialTheme.typography.titleMedium)
                     Text(" ")
                     answer?.let { Text(it) } ?: CircularProgressIndicator()
+                    Text(" ")
+                    MissingAppButtons(remember { AppRouter(this@ResultActivity) })
                 }
             }
         }

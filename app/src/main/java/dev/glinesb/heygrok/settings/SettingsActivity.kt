@@ -25,7 +25,16 @@ class SettingsActivity : ComponentActivity() {
                     var hasKey by remember { mutableStateOf(settings.hasApiKey) }
                     var input by remember { mutableStateOf("") }
                     var voice by remember { mutableStateOf(settings.voice) }
+                    var inApp by remember { mutableStateOf(settings.alwaysAnswerInApp) }
                     Column(Modifier.fillMaxSize().padding(24.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Column(Modifier.weight(1f)) {
+                                Text("Always answer in this app", style = MaterialTheme.typography.titleMedium)
+                                Text("Don't hand off to Grok / Grok Bot. Answers need an xAI API key (below).")
+                            }
+                            Switch(checked = inApp, onCheckedChange = { inApp = it; settings.alwaysAnswerInApp = it })
+                        }
+                        HorizontalDivider()
                         Text("Grok Voice (optional)", style = MaterialTheme.typography.headlineSmall)
                         Text(
                             "With your own xAI API key, the question after the wake word goes straight to Grok Voice " +

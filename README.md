@@ -19,6 +19,16 @@ from synthetic speech; see [MODELS.md](MODELS.md) for metrics, licenses, known l
 (`training/run.sh`). The detection threshold is configurable in `OpenWakeWordEngine`
 (default 0.5; raise it to reduce false accepts).
 
+## Hand-off to Grok / Grok Bot
+
+- When a question is captured, Hey Grok opens **Grok** (`ai.x.grok`) or **Grok Bot** (`ai.x.grok.bot`) if it's installed.
+  The main screen and the answer screen show a **Get … on Google Play** button for each app that is missing
+  (`market://details?id=…`, or the web Play listing if there's no store app).
+- **Android can't detect whether you are signed in** to Grok or Grok Bot; apps don't expose that to other apps.
+  If the target app is signed out, it simply shows its own login screen.
+- Settings → **Always answer in this app** skips the hand-off and answers on Hey Grok's own screen.
+  That needs your xAI API key (see below); without one, the screen explains that no answer is available.
+
 ## Optional: Grok Voice mode (paid, your own xAI key)
 
 Open **Settings** in the app, paste your own [xAI API key](https://console.x.ai/), and pick a voice
@@ -48,10 +58,15 @@ The same key also powers the text fallback screen used when neither app is insta
 
 CI: `.github/workflows/android.yml` runs `./gradlew assembleDebug` on every push/PR.
 
-## Third-party components & attribution
+## License
 
-- openWakeWord (Apache-2.0) by David Scripka: `melspectrogram.onnx`, `embedding_model.onnx`
-  (re-implementation of Google's Apache-2.0 `speech_embedding`), plus the training approach. See MODELS.md for a license caveat.
-- ONNX Runtime (MIT) by Microsoft.
-- Training data was synthesized with Piper (GPL-3.0, tool only, not shipped) using voices trained on
-  LibriTTS-R (CC BY 4.0, Koizumi et al.) and VCTK (CC BY 4.0, University of Edinburgh CSTR).
+Hey Grok is licensed under the **[PolyForm Noncommercial License 1.0.0](LICENSE)**.
+Copyright (c) 2026 Bradyn Glines.
+
+In plain words: you're free to **use, modify, and share** this project for **noncommercial** purposes
+(personal use, study, hobby projects, research, nonprofits). **No commercial use, and no selling it**,
+including as part of a paid product or service. This summary isn't legal advice; the LICENSE text governs.
+
+Third-party components keep their own licenses: the openWakeWord feature models are CC BY-NC-SA 4.0,
+ONNX Runtime is MIT, other libraries are Apache-2.0, and the training voices require CC BY 4.0 attribution.
+See [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).

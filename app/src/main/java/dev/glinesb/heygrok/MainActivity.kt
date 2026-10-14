@@ -19,6 +19,7 @@ import androidx.core.content.ContextCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import android.content.Intent
 import dev.glinesb.heygrok.router.AppRouter
+import dev.glinesb.heygrok.router.MissingAppButtons
 import dev.glinesb.heygrok.settings.SecureSettings
 import dev.glinesb.heygrok.settings.SettingsActivity
 import dev.glinesb.heygrok.wake.WakeWordService
@@ -80,6 +81,11 @@ private fun HomeScreen() {
             val installed = router.isInstalled(t.packageName)
             Text("${if (installed) "✅" else "—"} ${t.name} (${t.packageName})")
         }
+        MissingAppButtons(router)
+        Text(
+            "Android can't tell whether you're signed in to Grok or Grok Bot. A signed-out app shows its own login screen.",
+            style = MaterialTheme.typography.bodySmall,
+        )
 
         Text("Last question", style = MaterialTheme.typography.titleMedium)
         Text(state.lastQuestion ?: "—")

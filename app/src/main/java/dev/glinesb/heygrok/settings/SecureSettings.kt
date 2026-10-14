@@ -25,6 +25,11 @@ class SecureSettings(context: Context) {
 
     val hasApiKey: Boolean get() = apiKey != null
 
+    /** Skip handing off to Grok / Grok Bot and always answer on our own result screen. */
+    var alwaysAnswerInApp: Boolean
+        get() = prefs.getBoolean(KEY_IN_APP, false)
+        set(v) = prefs.edit().putBoolean(KEY_IN_APP, v).apply()
+
     var voice: String
         get() = prefs.getString(KEY_VOICE, DEFAULT_VOICE) ?: DEFAULT_VOICE
         set(v) = prefs.edit().putString(KEY_VOICE, v).apply()
@@ -33,6 +38,7 @@ class SecureSettings(context: Context) {
         private const val FILE = "secure_settings"
         private const val KEY_API = "xai_api_key"
         private const val KEY_VOICE = "voice"
+        private const val KEY_IN_APP = "always_answer_in_app"
         const val DEFAULT_VOICE = "eve"
         /** Built-in Grok voices; full list via GET https://api.x.ai/v1/tts/voices. */
         val VOICES = listOf("eve", "ara", "rex", "sal", "leo")

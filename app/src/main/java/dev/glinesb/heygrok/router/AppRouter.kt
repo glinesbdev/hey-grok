@@ -4,6 +4,7 @@ import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.util.Log
+import dev.glinesb.heygrok.settings.SecureSettings
 import dev.glinesb.heygrok.ui.ResultActivity
 import dev.glinesb.heygrok.wake.WakePhrase
 
@@ -12,7 +13,8 @@ import dev.glinesb.heygrok.wake.WakePhrase
  *  1. Preferred app for the phrase ("Hey Grok Bot" → Grok Bot, "Hey Grok" → Grok), else the other one.
  *  2. Try ACTION_SEND with the question text targeted at that package.
  *  3. Else just open the app with its launch intent (question can't be passed).
- *  4. If neither app is installed, show our own result screen backed by the xAI API.
+ *  0. "Always answer in this app" setting → skip straight to step 4.
+ *  4. If neither app is installed (or that setting is on), show our own result screen backed by the xAI API.
  *
  * NOTE: starting activities from a background service is restricted (Android 10+).
  * Holding a visible foreground-service notification is NOT an exemption. It works
@@ -30,6 +32,7 @@ class AppRouter(private val context: Context) {
     fun installedTargets(): List<Target> = listOf(GROK, GROK_BOT).filter { isInstalled(it.packageName) }
 
     fun route(question: String, phrase: WakePhrase) {
+        if (SecureSettings(context).alwaysAnswerInApp) { showFallback(question); return }
         val ordered = if (phrase == WakePhrase.HEY_GROK_BOT) listOf(GROK_BOT, GROK) else listOf(GROK, GROK_BOT)
         val target = ordered.firstOrNull { isInstalled(it.packageName) }
         when {
