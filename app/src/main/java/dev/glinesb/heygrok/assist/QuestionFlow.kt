@@ -19,8 +19,12 @@ class QuestionFlow(private val context: Context, private val source: String) {
     private val speech = SpeechCapture(context)
     private var voice: GrokVoiceSession? = null
 
-    /** [onDone] is called exactly once, on any thread, when the turn has finished. */
-    fun run(phrase: WakePhrase, onDone: () -> Unit) {
+    /**
+     * [onDone] is called exactly once, on any thread, when the turn has finished.
+     * With [deliver], the transcript is handed to the caller (which routes and finishes) instead of AppRouter;
+     * in that case [onDone] is only called for errors and Grok Voice turns.
+     */
+    fun run(phrase: WakePhrase, onDone: () -> Unit, deliver: ((String) -> Unit)? = null) {
         val key = settings.apiKey
         HgLog.i("flow[$source]: start ($phrase, mode=${if (key != null) "grok-voice" else "stt"})")
         if (key != null) { runVoice(key, onDone); return }
@@ -30,6 +34,7 @@ class QuestionFlow(private val context: Context, private val source: String) {
                 AppState.update { it.copy(status = "Speak your question ($engine recognizer)…") }
             override fun onPartial(text: String) = AppState.update { it.copy(partial = text) }
             override fun onResult(text: String) {
+                if (deliver != null) { HgLog.i("flow[$source]: transcript='$text' → caller"); deliver(text); return }
                 HgLog.i("flow[$source]: question='$text' → routing")
                 AppState.update { it.copy(lastQuestion = text, partial = null, status = "Routing…") }
                 AppRouter(context).route(text, phrase)

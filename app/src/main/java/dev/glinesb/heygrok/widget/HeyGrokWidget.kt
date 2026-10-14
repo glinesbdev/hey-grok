@@ -26,6 +26,8 @@ import androidx.glance.text.TextStyle
 import dev.glinesb.heygrok.AppState
 import dev.glinesb.heygrok.HgLog
 import dev.glinesb.heygrok.assist.AssistActivity
+import dev.glinesb.heygrok.assist.LaunchTarget
+import dev.glinesb.heygrok.router.AppRouter
 import dev.glinesb.heygrok.tile.ListeningTileService
 import dev.glinesb.heygrok.wake.WakeWordService
 import kotlinx.coroutines.CoroutineScope
@@ -56,6 +58,15 @@ class HeyGrokWidget : GlanceAppWidget() {
                     .clickable(actionStartActivity(AssistActivity.askIntent(context))),
                 contentAlignment = Alignment.Center,
             ) { Text("🎙", style = TextStyle(fontSize = 24.sp)) }
+            if (AppRouter(context).isInstalled(AppRouter.GROK_BOT.packageName)) {
+                Spacer(GlanceModifier.width(8.dp))
+                Box(
+                    GlanceModifier.height(56.dp).cornerRadius(28.dp).background(GlanceTheme.colors.secondaryContainer)
+                        .padding(horizontal = 12.dp)
+                        .clickable(actionStartActivity(AssistActivity.askIntent(context, LaunchTarget.GROK_BOT))),
+                    contentAlignment = Alignment.Center,
+                ) { Text("Bot", style = TextStyle(color = GlanceTheme.colors.onSecondaryContainer, fontWeight = FontWeight.Medium)) }
+            }
             Spacer(GlanceModifier.width(12.dp))
             Column(GlanceModifier.defaultWeight()) {
                 Text("Hey Grok", style = TextStyle(fontWeight = FontWeight.Bold, color = GlanceTheme.colors.onSurface))

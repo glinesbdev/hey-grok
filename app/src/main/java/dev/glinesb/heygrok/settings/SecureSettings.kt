@@ -1,5 +1,7 @@
 package dev.glinesb.heygrok.settings
 
+import dev.glinesb.heygrok.assist.LaunchTarget
+import dev.glinesb.heygrok.router.AppRouter
 import android.content.Context
 import android.content.SharedPreferences
 import androidx.security.crypto.EncryptedSharedPreferences
@@ -10,7 +12,7 @@ import androidx.security.crypto.MasterKey
  * EncryptedSharedPreferences (AES-256-GCM values, key wrapped by an Android Keystore master key).
  * The key never goes into BuildConfig/local.properties and must never be logged.
  */
-class SecureSettings(context: Context) {
+class SecureSettings(private val context: Context) {
     private val prefs: SharedPreferences = EncryptedSharedPreferences.create(
         context.applicationContext,
         FILE,
@@ -30,6 +32,13 @@ class SecureSettings(context: Context) {
         get() = prefs.getBoolean(KEY_IN_APP, false)
         set(v) = prefs.edit().putBoolean(KEY_IN_APP, v).apply()
 
+    /** Target for launches without a wake phrase (tile, assistant gesture, widget mic). Not secret; stored here for one settings file. */
+    var launchTarget: LaunchTarget
+        get() = LaunchTarget.parse(prefs.getString(KEY_TARGET, null)) ?: AppRouter(context).let {
+            LaunchTarget.default(it.isInstalled(AppRouter.GROK.packageName), it.isInstalled(AppRouter.GROK_BOT.packageName))
+        }
+        set(v) = prefs.edit().putString(KEY_TARGET, v.name).apply()
+
     var voice: String
         get() = prefs.getString(KEY_VOICE, DEFAULT_VOICE) ?: DEFAULT_VOICE
         set(v) = prefs.edit().putString(KEY_VOICE, v).apply()
@@ -38,6 +47,7 @@ class SecureSettings(context: Context) {
         private const val FILE = "secure_settings"
         private const val KEY_API = "xai_api_key"
         private const val KEY_VOICE = "voice"
+        private const val KEY_TARGET = "launch_target"
         private const val KEY_IN_APP = "always_answer_in_app"
         const val DEFAULT_VOICE = "eve"
         /** Built-in Grok voices; full list via GET https://api.x.ai/v1/tts/voices. */

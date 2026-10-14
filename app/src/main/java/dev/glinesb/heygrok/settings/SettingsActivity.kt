@@ -19,6 +19,9 @@ import androidx.compose.foundation.selection.selectable
 import androidx.compose.ui.unit.dp
 import dev.glinesb.heygrok.HgLog
 import dev.glinesb.heygrok.assist.AssistantRole
+import dev.glinesb.heygrok.assist.LaunchTarget
+import androidx.compose.foundation.selection.selectable
+import androidx.compose.ui.semantics.Role
 
 /** Optional Grok Voice mode: enter your own xAI key (stored encrypted) and pick a voice. */
 class SettingsActivity : ComponentActivity() {
@@ -36,6 +39,7 @@ class SettingsActivity : ComponentActivity() {
                     var input by remember { mutableStateOf("") }
                     var voice by remember { mutableStateOf(settings.voice) }
                     var inApp by remember { mutableStateOf(settings.alwaysAnswerInApp) }
+                    var target by remember { mutableStateOf(settings.launchTarget) }
                     Column(Modifier.fillMaxSize().safeDrawingPadding().verticalScroll(rememberScrollState()).padding(24.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Column(Modifier.weight(1f)) {
@@ -43,6 +47,17 @@ class SettingsActivity : ComponentActivity() {
                                 Text("Don't hand off to Grok / Grok Bot. Answers need an xAI API key (below).")
                             }
                             Switch(checked = inApp, onCheckedChange = { inApp = it; settings.alwaysAnswerInApp = it })
+                        }
+                        HorizontalDivider()
+                        Text("Default app for button/assistant launches", style = MaterialTheme.typography.titleMedium)
+                        Text("Used by the widget mic, Quick Settings and the assistant gesture. \"Hey Grok\" / \"Hey Grok Bot\" always pick their own app, and you can start a question with \"Grok bot, …\" or \"Grok, …\".")
+                        LaunchTarget.entries.forEach { t ->
+                            Row(Modifier.fillMaxWidth().selectable(selected = target == t, role = Role.RadioButton) {
+                                target = t; settings.launchTarget = t; HgLog.i("settings: launch target → $t")
+                            }.padding(vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+                                RadioButton(selected = target == t, onClick = null)
+                                Spacer(Modifier.width(12.dp)); Text(t.label)
+                            }
                         }
                         HorizontalDivider()
                         Text("Default digital assistant", style = MaterialTheme.typography.titleMedium)

@@ -86,7 +86,7 @@ class WakeWordService : Service() {
         // When we hold the assistant role, the system keeps our VoiceInteractionService bound, which
         // lets the hand-off start Grok / Grok Bot even with the app closed (see ARCHITECTURE.md).
         HgLog.i("service: wake $phrase (assistant role held=${AssistantRole.isHeld(this)})")
-        flow = QuestionFlow(this, "wake").also { f -> f.run(phrase) { flow = null; listenForWakeWord() } }
+        flow = QuestionFlow(this, "wake").also { f -> f.run(phrase, onDone = { flow = null; listenForWakeWord() }) }
     }
 
     private fun buildNotification(): Notification {
