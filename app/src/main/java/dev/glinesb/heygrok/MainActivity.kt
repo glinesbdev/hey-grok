@@ -17,7 +17,10 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import android.content.Intent
 import dev.glinesb.heygrok.router.AppRouter
+import dev.glinesb.heygrok.settings.SecureSettings
+import dev.glinesb.heygrok.settings.SettingsActivity
 import dev.glinesb.heygrok.wake.WakeWordService
 
 class MainActivity : ComponentActivity() {
@@ -46,7 +49,12 @@ private fun HomeScreen() {
     val micOk = perms[Manifest.permission.RECORD_AUDIO] == true
 
     Column(Modifier.fillMaxSize().padding(24.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        Text("Hey Grok", style = MaterialTheme.typography.headlineMedium)
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text("Hey Grok", style = MaterialTheme.typography.headlineMedium, modifier = Modifier.weight(1f))
+            TextButton(onClick = { context.startActivity(Intent(context, SettingsActivity::class.java)) }) { Text("Settings") }
+        }
+        val paid = remember(state.status) { SecureSettings(context).hasApiKey }
+        Text(if (paid) "Mode: Grok Voice (your xAI key, paid)" else "Mode: free (on-device STT → Grok / Grok Bot app)")
 
         Text("Permissions", style = MaterialTheme.typography.titleMedium)
         perms.forEach { (p, ok) -> Text("${if (ok) "✅" else "❌"} ${p.substringAfterLast('.')}") }

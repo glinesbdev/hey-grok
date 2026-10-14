@@ -1,16 +1,8 @@
-import java.util.Properties
-
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
     id("org.jetbrains.kotlin.plugin.compose")
 }
-
-val localProps = Properties().apply {
-    val f = rootProject.file("local.properties")
-    if (f.exists()) f.inputStream().use { load(it) }
-}
-fun secret(key: String) = (localProps.getProperty(key) ?: System.getenv(key) ?: "").replace("\"", "")
 
 android {
     namespace = "dev.glinesb.heygrok"
@@ -21,9 +13,8 @@ android {
         targetSdk = 35
         versionCode = 1
         versionName = "0.1.0"
-        buildConfigField("String", "XAI_API_KEY", "\"${secret("XAI_API_KEY")}\"")
     }
-    buildFeatures { compose = true; buildConfig = true }
+    buildFeatures { compose = true }
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
@@ -42,6 +33,8 @@ dependencies {
     implementation("androidx.compose.ui:ui")
     implementation("androidx.compose.material3:material3")
     implementation("com.microsoft.onnxruntime:onnxruntime-android:1.20.0")
+    implementation("com.squareup.okhttp3:okhttp:4.12.0")
+    implementation("androidx.security:security-crypto:1.1.0-alpha06")
     testImplementation("junit:junit:4.13.2")
     // Desktop ONNX Runtime (same ai.onnxruntime API) so the pipeline runs in JVM unit tests.
     testImplementation("com.microsoft.onnxruntime:onnxruntime:1.20.0")

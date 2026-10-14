@@ -1,6 +1,5 @@
 package dev.glinesb.heygrok.xai
 
-import dev.glinesb.heygrok.BuildConfig
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.json.JSONArray
@@ -11,15 +10,14 @@ import java.net.URL
 /**
  * Minimal xAI chat-completions client (OpenAI-compatible endpoint).
  * STUB-ish: no streaming, no retries, no conversation history.
- * API key comes from XAI_API_KEY in local.properties — never commit it.
- * For a shipped app, proxy through your own backend instead of embedding a key.
+ * The key is the user's own, from SecureSettings (encrypted on device). It is never logged.
  */
 class XaiClient(
-    private val apiKey: String = BuildConfig.XAI_API_KEY,
+    private val apiKey: String?,
     private val model: String = "grok-4",
 ) {
     suspend fun ask(question: String): String = withContext(Dispatchers.IO) {
-        if (apiKey.isBlank()) return@withContext "(No XAI_API_KEY set in local.properties.)"
+        if (apiKey.isNullOrBlank()) return@withContext "No answer: neither Grok app is installed and no xAI API key is set (Settings)."
         val conn = (URL("https://api.x.ai/v1/chat/completions").openConnection() as HttpURLConnection).apply {
             requestMethod = "POST"
             doOutput = true

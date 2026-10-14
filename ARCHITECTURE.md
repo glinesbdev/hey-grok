@@ -6,7 +6,9 @@ flowchart TD
     subgraph SVC[WakeWordService · FGS type=microphone]
         WW[OpenWakeWordEngine<br/>AudioRecord 16 kHz → melspec → embedding → keyword ONNX<br/>"Hey Grok" / "Hey Grok Bot"]
     end
-    WW -->|wake + phrase| STT[SpeechCapture<br/>Android SpeechRecognizer]
+    WW -->|wake, no key: free| STT[SpeechCapture<br/>Android SpeechRecognizer]
+    WW -->|wake, user key set: paid| GV[GrokVoiceSession<br/>OkHttp WSS api.x.ai/v1/realtime<br/>PCM16 24 kHz + server_vad → AudioTrack]
+    GV -.->|turn done| WW
     STT -->|question text| R[AppRouter]
     R -->|PackageManager + &lt;queries&gt;| D{Installed?}
     D -->|Grok ai.x.grok| G[ACTION_SEND text<br/>or launch intent]
@@ -37,6 +39,11 @@ flowchart TD
    It tries `ACTION_SEND` (text/plain) aimed at that package, then the plain launch intent.
 5. **Fallback.** If neither app is installed (or neither accepts the intent),
    `ResultActivity` asks the xAI API through `XaiClient` and shows the answer.
+
+6. **Optional Grok Voice.** If the user saved their own xAI key in Settings (EncryptedSharedPreferences +
+   Keystore), the wake word starts a speech-to-speech turn over the realtime WebSocket instead of
+   STT and routing. That turn is paid (about $0.08/min) and billed to the user's own xAI account. A
+   production app should mint short-lived ephemeral tokens on a backend instead of holding a long-lived key.
 
 ## Platform limits
 

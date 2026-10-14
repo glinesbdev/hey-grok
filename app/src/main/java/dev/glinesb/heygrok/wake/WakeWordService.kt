@@ -17,7 +17,9 @@ import androidx.core.content.ContextCompat
 import dev.glinesb.heygrok.AppState
 import dev.glinesb.heygrok.MainActivity
 import dev.glinesb.heygrok.router.AppRouter
+import dev.glinesb.heygrok.settings.SecureSettings
 import dev.glinesb.heygrok.speech.SpeechCapture
+import dev.glinesb.heygrok.voice.GrokVoiceSession
 
 /**
  * Foreground service (type=microphone) that keeps the wake-word engine running.
@@ -32,12 +34,15 @@ class WakeWordService : Service() {
     private lateinit var engine: WakeWordEngine
     private lateinit var speech: SpeechCapture
     private lateinit var router: AppRouter
+    private lateinit var settings: SecureSettings
+    private var voiceSession: GrokVoiceSession? = null
 
     override fun onCreate() {
         super.onCreate()
         engine = OpenWakeWordEngine(this)
         speech = SpeechCapture(this)
         router = AppRouter(this)
+        settings = SecureSettings(this)
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -74,6 +79,8 @@ class WakeWordService : Service() {
     private fun onWake(phrase: WakePhrase) {
         // Release the mic so SpeechRecognizer can use it.
         engine.stop()
+        val key = settings.apiKey
+        if (key != null) { startGrokVoice(key); return }   // optional paid mode
         AppState.update { it.copy(status = "Wake ($phrase) — speak your question") }
         speech.capture(
             onResult = { question ->
@@ -86,6 +93,21 @@ class WakeWordService : Service() {
                 listenForWakeWord()
             },
         )
+    }
+
+    /** Paid Grok Voice turn with the user's own key; afterwards resume wake-word listening. */
+    private fun startGrokVoice(key: String) {
+        AppState.update { it.copy(status = "Connecting to Grok Voice…", lastQuestion = "(voice)", lastResult = null) }
+        voiceSession = GrokVoiceSession(key, settings.voice, object : GrokVoiceSession.Listener {
+            override fun onStatus(text: String) = AppState.update { it.copy(status = text) }
+            override fun onUserTranscript(text: String) = AppState.update { it.copy(lastQuestion = text) }
+            override fun onAssistantTranscript(text: String) = AppState.update { it.copy(lastResult = text) }
+            override fun onFinished(error: String?) {
+                voiceSession = null
+                if (error != null) AppState.update { it.copy(status = error) }
+                listenForWakeWord()
+            }
+        }).also { it.start() }
     }
 
     private fun buildNotification(): Notification {
@@ -111,6 +133,7 @@ class WakeWordService : Service() {
     }
 
     override fun onDestroy() {
+        voiceSession?.cancel()
         speech.cancel()
         engine.release()
         AppState.update { it.copy(listening = false, status = "Stopped") }

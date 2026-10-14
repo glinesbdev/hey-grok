@@ -20,6 +20,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import dev.glinesb.heygrok.AppState
+import dev.glinesb.heygrok.settings.SecureSettings
 import dev.glinesb.heygrok.xai.XaiClient
 
 /** Fallback "answer overlay" when neither Grok app is installed. */
@@ -31,7 +32,7 @@ class ResultActivity : ComponentActivity() {
             MaterialTheme {
                 var answer by remember { mutableStateOf<String?>(null) }
                 LaunchedEffect(question) {
-                    val a = XaiClient().ask(question)
+                    val a = XaiClient(SecureSettings(this@ResultActivity).apiKey).ask(question)
                     answer = a
                     AppState.update { it.copy(lastResult = a) }
                 }

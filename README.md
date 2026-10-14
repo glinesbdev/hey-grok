@@ -8,11 +8,8 @@ it falls back to an xAI API answer screen. See [ARCHITECTURE.md](ARCHITECTURE.md
 ## Setup
 
 1. Android Studio (Ladybug+) or JDK 17 + Android SDK 35.
-2. Optional `local.properties` in the repo root (gitignored, never commit it):
-   ```properties
-   sdk.dir=/path/to/Android/sdk
-   XAI_API_KEY=your-xai-api-key   # optional, fallback answers only
-   ```
+2. `local.properties` in the repo root (gitignored) only needs `sdk.dir=/path/to/Android/sdk`.
+   Android Studio writes it for you. No API keys go in the build.
 3. `./gradlew installDebug`, open the app, grant mic + notifications, and turn on **Listening**.
    Say "Hey Grok" or "Hey Grok Bot".
 
@@ -22,6 +19,22 @@ from synthetic speech; see [MODELS.md](MODELS.md) for metrics, licenses, known l
 (`training/run.sh`). The detection threshold is configurable in `OpenWakeWordEngine`
 (default 0.5; raise it to reduce false accepts).
 
+## Optional: Grok Voice mode (paid, your own xAI key)
+
+Open **Settings** in the app, paste your own [xAI API key](https://console.x.ai/), and pick a voice
+(eve, ara, rex, sal, leo). The key is stored only on the device, encrypted with
+`EncryptedSharedPreferences` under an Android Keystore master key. It's never put in BuildConfig or
+`local.properties`, never logged, and backups are disabled.
+
+When a key is set, the turn after the wake word connects to
+`wss://api.x.ai/v1/realtime?model=grok-voice-latest` (xAI speech-to-speech, OpenAI Realtime-compatible)
+over OkHttp WebSocket. It streams 24 kHz PCM16 mic audio, lets `server_vad` detect the end of
+your question, and plays `response.output_audio.delta` through `AudioTrack`.
+
+**This costs money: about $0.08 per minute of voice, billed to your own xAI account.** Remove the key
+in Settings to go back to the free path: on-device speech-to-text, then the Grok / Grok Bot app.
+The same key also powers the text fallback screen used when neither app is installed.
+
 ## Status
 
 | Piece | State |
@@ -29,7 +42,8 @@ from synthetic speech; see [MODELS.md](MODELS.md) for metrics, licenses, known l
 | Foreground mic service + openWakeWord engine (ONNX Runtime) | Implemented, JVM-tested on synthetic clips |
 | SpeechRecognizer capture | Implemented |
 | App detection + ACTION_SEND / launch routing | Implemented (ACTION_SEND support in Grok apps not verified) |
-| xAI fallback (`XaiClient`) | Minimal: blocking, no streaming/history |
+| xAI text fallback (`XaiClient`) | Minimal: blocking, no streaming/history; uses the Settings key |
+| Grok Voice mode (`GrokVoiceSession`) | Implemented, one turn per wake word; not yet tested against the live API |
 | Default assistant role (VoiceInteractionService) | Documented only |
 
 CI: `.github/workflows/android.yml` runs `./gradlew assembleDebug` on every push/PR.

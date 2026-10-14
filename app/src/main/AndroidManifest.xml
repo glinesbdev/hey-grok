@@ -21,6 +21,7 @@
     </queries>
 
     <application
+        android:allowBackup="false"
         android:label="Hey Grok"
         android:theme="@android:style/Theme.Material.Light.NoActionBar">
 
@@ -38,6 +39,10 @@
             android:name=".ui.ResultActivity"
             android:exported="false"
             android:theme="@android:style/Theme.Material.Light.Dialog" />
+
+        <activity
+            android:name=".settings.SettingsActivity"
+            android:exported="false" />
 
         <service
             android:name=".wake.WakeWordService"
