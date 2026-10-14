@@ -66,8 +66,19 @@ object ListeningPopup {
         override fun run() { if (AppState.state.value.capturing) main.postDelayed(this, 500) else dismiss() }
     }
 
-    fun start(context: Context, phrase: WakePhrase) = main.post {
+    private var sid = 0L
+    private var onUserCancel: (() -> Unit)? = null
+
+    /** The user dismissed the pop-up (tap, or the system hid the assistant session). */
+    fun userDismissed(how: String) = main.post {
+        if (surface == null) return@post
+        HgLog.i("popup s$sid: dismissed by user ($how)")
+        val cb = onUserCancel; dismiss(); cb?.invoke()
+    }
+
+    fun start(context: Context, phrase: WakePhrase, sessionId: Long, onUserCancel: () -> Unit) = main.post {
         dismiss()
+        sid = sessionId; this.onUserCancel = onUserCancel
         if (ProcessLifecycleOwner.get().lifecycle.currentState.isAtLeast(Lifecycle.State.STARTED)) {
             HgLog.d("popup: app is on screen, no pop-up"); return@post
         }
@@ -81,16 +92,16 @@ object ListeningPopup {
                 .firstOrNull { r.isInstalled(it.packageName) }?.name ?: "Hey Grok"
         }
         ending = null
-        AppState.update { it.copy(rms = -2f, sendingTo = null) }
         val sf: Surface = when {
             AssistantRole.isHeld(app) && HeyGrokInteractionService.instance != null -> SessionSurface(app)
             s.overlayBubble && Settings.canDrawOverlays(app) -> BubbleSurface(app)
             else -> NotificationSurface(app)
         }
-        HgLog.i("popup: show via ${sf.name} target=$target")
+        HgLog.i("popup s$sid: show via ${sf.name} target=$target")
         surface = sf
         runCatching { sf.show() }.onFailure { HgLog.e("popup: ${sf.name} failed → notification", it); surface = NotificationSurface(app).also { n -> n.show() } }
-        job = scope.launch { AppState.state.collect { render(model(it)) } }
+        render(Model("Listening · $target", "Speak now…", -2f, Phase.LISTENING)) // always start empty
+        job = scope.launch { AppState.state.collect { if (it.session == sid) render(model(it)) } }
         main.postDelayed(timeout, TIMEOUT_MS)
     }
 
@@ -98,6 +109,7 @@ object ListeningPopup {
     fun end() = main.post {
         if (surface == null) return@post
         val st = AppState.state.value
+        if (st.session != sid) { HgLog.w("popup: end() for stale session"); return@post }
         ending = if (st.sendingTo != null) Phase.SENDING else if (st.status.contains("try again") || st.status.contains("rror")) Phase.ERROR else Phase.SENDING
         render(model(st))
         HgLog.i("popup: end ($ending)")
@@ -110,7 +122,7 @@ object ListeningPopup {
         main.removeCallbacks(timeout); main.removeCallbacks(dismissRunnable)
         job?.cancel(); job = null
         surface?.let { HgLog.d("popup: dismiss ${it.name}"); runCatching { it.dismiss() } }
-        surface = null; last = null
+        surface = null; last = null; onUserCancel = null; ending = null
     }
 
     private fun model(st: AppState.State): Model = when {
@@ -129,7 +141,7 @@ object ListeningPopup {
             HeyGrokInteractionService.instance!!.showSession(Bundle().apply { putBoolean(HeyGrokSession.EXTRA_COMPACT, true) }, 0)
         }
         override fun render(m: Model) { HeyGrokSession.compactCard?.render(m) }
-        override fun dismiss() { HeyGrokSession.current?.hide() }
+        override fun dismiss() { HeyGrokSession.hideCompact() }
     }
 
     private class BubbleSurface(val c: Context) : Surface {
@@ -139,7 +151,7 @@ object ListeningPopup {
         private val frame = android.widget.FrameLayout(c).apply {
             val m = (12 * c.resources.displayMetrics.density).toInt()
             addView(card, android.widget.FrameLayout.LayoutParams(-1, -2))
-            setOnClickListener { dismiss() }
+            setOnClickListener { userDismissed("bubble tap") }
             applyPopupInsets("bubble")
         }
         override fun show() {

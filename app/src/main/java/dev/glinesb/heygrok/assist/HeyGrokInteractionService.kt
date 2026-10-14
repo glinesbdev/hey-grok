@@ -73,7 +73,7 @@ class HeyGrokSession(context: Context) : VoiceInteractionSession(context) {
         compactCard = card
         return FrameLayout(context).apply {
             addView(card, FrameLayout.LayoutParams(-1, -2))
-            setOnClickListener { hide() }
+            setOnClickListener { ListeningPopup.userDismissed("card tap") }
             applyPopupInsets("session")
         }
     }
@@ -89,14 +89,22 @@ class HeyGrokSession(context: Context) : VoiceInteractionSession(context) {
         hide() // the overlay activity owns the UI from here
     }
     override fun onHide() {
-        HgLog.d("assist: session onHide")
+        HgLog.d("assist: session onHide (ours=$hidingOurselves compact=$compact)")
+        // Hidden by the system (back, home, tap outside) while the compact pop-up was up → user cancel.
+        if (compact && !hidingOurselves) ListeningPopup.userDismissed("session hidden by system")
+        hidingOurselves = false
         if (current === this) { current = null; compactCard = null }
         super.onHide()
     }
+
+    private var hidingOurselves = false
 
     companion object {
         const val EXTRA_COMPACT = "dev.glinesb.heygrok.COMPACT"
         @Volatile var current: HeyGrokSession? = null
         @Volatile var compactCard: PopupCardView? = null
+
+        /** Hide the compact pop-up from our own code (routing done, error, timeout) – not a user cancel. */
+        fun hideCompact() { current?.let { it.hidingOurselves = true; it.hide() } }
     }
 }

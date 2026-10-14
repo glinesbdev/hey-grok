@@ -38,7 +38,12 @@ class AppRouter(private val context: Context) {
 
     fun installedTargets(): List<Target> = listOf(GROK, GROK_BOT).filter { isInstalled(it.packageName) }
 
-    fun route(question: String, phrase: WakePhrase) {
+    /** Session id of the question being routed (0 = unscoped); scopes AppState writes and intent identity. */
+    private var sid = 0L
+
+    fun route(question: String, phrase: WakePhrase, sessionId: Long = 0L) {
+        sid = sessionId
+        HgLog.i("router s$sid: route ${question.length} chars ($phrase)")
         if (SecureSettings(context).alwaysAnswerInApp) { sending("Hey Grok"); showFallback(question); return }
         if (phrase == WakePhrase.HEY_GROK_BOT && isInstalled(GROK_BOT.packageName) && tryBotMessage(question)) return
         val ordered = if (phrase == WakePhrase.HEY_GROK_BOT) listOf(GROK_BOT, GROK) else listOf(GROK, GROK_BOT)
@@ -59,7 +64,7 @@ class AppRouter(private val context: Context) {
         val parsed = BotMessage.parse(question, SecureSettings(context).botContacts) ?: return false
         HgLog.i("router: bot message → '${parsed.contact.name}' (${parsed.message.length} chars)")
         val view = Intent(Intent.ACTION_VIEW, Uri.parse(BotMessage.agentLink(parsed.contact.agentId)))
-            .setPackage(GROK_BOT.packageName).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            .setPackage(GROK_BOT.packageName).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK).unique()
         if (view.resolveActivity(context.packageManager) != null && start(view)) {
             sending("${parsed.contact.name} (Grok Bot)")
             val cm = context.getSystemService(ClipboardManager::class.java)
@@ -73,7 +78,17 @@ class AppRouter(private val context: Context) {
         return trySend(GROK_BOT, parsed.message).also { if (it) sending("${parsed.contact.name} (Grok Bot)") }
     }
 
-    private fun sending(label: String) { HgLog.i("router: sending to $label"); AppState.update { it.copy(sendingTo = label) } }
+    private fun sending(label: String) {
+        HgLog.i("router s$sid: sending to $label")
+        if (sid != 0L) AppState.updateIf(sid) { it.copy(sendingTo = label) } else AppState.update { it.copy(sendingTo = label) }
+    }
+
+    /**
+     * Intents that differ only in extras are "equal" to Android. With FLAG_ACTIVITY_NEW_TASK, an existing
+     * Grok task started by an earlier (e.g. cancelled) hand-off would just be brought to front with the
+     * OLD text, and the new EXTRA_TEXT never delivered. A unique identifier makes every hand-off distinct.
+     */
+    private fun Intent.unique(): Intent = apply { identifier = "heygrok-s$sid-${System.nanoTime()}" }
 
     private fun trySend(target: Target, question: String): Boolean {
         val send = Intent(Intent.ACTION_SEND).apply {
@@ -81,7 +96,7 @@ class AppRouter(private val context: Context) {
             setPackage(target.packageName)
             putExtra(Intent.EXTRA_TEXT, question)
             addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-        }
+        }.unique()
         if (send.resolveActivity(context.packageManager) == null) return false
         return start(send)
     }

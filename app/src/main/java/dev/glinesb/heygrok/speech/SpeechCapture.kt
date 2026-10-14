@@ -54,8 +54,9 @@ class SpeechCapture(
 
     // per-capture state (main thread only)
     private var cb: Callback? = null
-    private val committed = StringBuilder()
-    private var segPartial = ""
+    private val buf = TranscriptBuffer()
+    /** Session id of the current capture (from AppState.beginSession); logged and used to drop stale callbacks. */
+    private var sid = 0L
     private var speechStarted = false
     private var lastSpeechAt = 0L
     private var lastResetLog = 0L
@@ -76,10 +77,12 @@ class SpeechCapture(
         finish(text(), "Didn't catch that")
     }
 
-    fun capture(callback: Callback) {
+    fun capture(sessionId: Long, callback: Callback) {
         main.post {
             destroyNow()
-            cb = callback; committed.clear(); segPartial = ""; speechStarted = false; lastSpeechAt = 0
+            sid = sessionId; buf.reset()
+            HgLog.i("stt[s$sid]: new capture, buffer reset")
+            cb = callback; speechStarted = false; lastSpeechAt = 0
             segments = 0; continuation = false; firstReadyAt = 0; finished = false
             main.postDelayed(absolute, maxTotalMs)
             main.postDelayed({ start(preferOnDevice = true) }, startDelayMs)
@@ -88,11 +91,14 @@ class SpeechCapture(
 
     /** Cancel any session. Safe from any thread; destroys synchronously when already on main. */
     fun cancel() {
-        if (Looper.myLooper() == Looper.getMainLooper()) { finished = true; destroyNow() }
-        else main.post { finished = true; destroyNow() }
+        val r = Runnable {
+            if (!finished) HgLog.i("stt[s$sid]: cancelled")
+            finished = true; cb = null; buf.reset(); destroyNow()
+        }
+        if (Looper.myLooper() == Looper.getMainLooper()) r.run() else main.post(r)
     }
 
-    private fun text() = (committed.toString() + " " + segPartial).trim()
+    private fun text() = buf.text()
 
     private fun destroyNow() {
         main.removeCallbacksAndMessages(null)
@@ -106,7 +112,9 @@ class SpeechCapture(
         finished = true
         destroyNow()
         val c = cb ?: return
-        if (!text.isNullOrBlank()) { HgLog.i("stt: utterance done (${segments} segment(s)) '$text'"); c.onResult(text) }
+        cb = null // exactly one terminal callback per session
+        buf.reset()
+        if (!text.isNullOrBlank()) { HgLog.i("stt[s$sid]: utterance done (${segments + 1} segment(s)) '$text'"); c.onResult(text) }
         else c.onError(errorIfEmpty)
     }
 
@@ -163,7 +171,7 @@ class SpeechCapture(
         fun restartSegment(reason: String) {
             segments++
             HgLog.i("stt: restart #$segments ($reason)")
-            segPartial = ""; segDone = false
+            buf.clearPartial(); segDone = false
             main.postDelayed({
                 if (finished || my != session) return@postDelayed
                 try { r.startListening(intent()) } catch (e: Exception) {
@@ -199,8 +207,7 @@ class SpeechCapture(
                 if (my != session) return
                 val t = partialResults?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)?.firstOrNull().orEmpty()
                 HgLog.d("stt[$engine]: onPartialResults '$t'")
-                if (t.isNotBlank() && t != segPartial) {
-                    segPartial = t
+                if (buf.setPartial(t)) {
                     speechEvidence("partial")
                     c.onPartial(text())
                 }
@@ -208,20 +215,19 @@ class SpeechCapture(
             override fun onResults(results: Bundle?) {
                 if (my != session || segDone) return
                 segDone = true
-                val t = results?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)?.firstOrNull().orEmpty().ifBlank { segPartial }
-                HgLog.i("stt[$engine]: onResults '$t'")
-                if (t.isNotBlank()) { if (committed.isNotEmpty()) committed.append(' '); committed.append(t.trim()) }
-                segPartial = ""
+                val t = results?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)?.firstOrNull().orEmpty()
+                HgLog.i("stt[s$sid/$engine]: onResults '$t'")
+                buf.commitSegment(t)
                 val silence = SystemClock.uptimeMillis() - lastSpeechAt
-                val incomplete = looksIncomplete(committed.toString())
-                if (committed.isNotBlank() && segments + 1 < maxSegments && (silence < trueSilenceMs || incomplete)) {
+                val incomplete = looksIncomplete(buf.text())
+                if (!buf.isEmpty && segments + 1 < maxSegments && (silence < trueSilenceMs || incomplete)) {
                     continuation = true
                     firstGrace = (graceMs() - silence).coerceAtLeast(900)
-                    c.onPartial(committed.toString())
+                    c.onPartial(buf.text())
                     restartSegment("segment ended after ${silence}ms silence, incomplete=$incomplete")
                 } else {
                     HgLog.d("stt: segment final, silence=${silence}ms → done")
-                    finish(committed.toString(), "Didn't catch that")
+                    finish(buf.text(), "Didn't catch that")
                 }
             }
             override fun onError(error: Int) {

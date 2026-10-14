@@ -38,7 +38,7 @@ class WakeWordService : Service() {
     @Volatile private var paused = false
 
     private val micOwner = object : MicCoordinator.Owner {
-        override fun pauseForCapture() { paused = true; flow?.cancel(); flow = null; engine.stop() }
+        override fun pauseForCapture() { paused = true; ListeningPopup.dismiss(); flow?.reset("mic borrowed"); flow = null; engine.stop() }
         override fun resumeAfterCapture() { paused = false; listenForWakeWord() }
     }
 
@@ -89,8 +89,14 @@ class WakeWordService : Service() {
         // lets the hand-off start Grok / Grok Bot even with the app closed (see ARCHITECTURE.md).
         HgLog.i("service: wake $phrase (assistant role held=${AssistantRole.isHeld(this)})")
         WakeFeedback.play(this)
-        ListeningPopup.start(this, phrase)
-        flow = QuestionFlow(this, "wake").also { f -> f.run(phrase, onDone = { flow = null; ListeningPopup.end(); listenForWakeWord() }) }
+        flow?.reset("new wake")
+        val f = QuestionFlow(this, "wake")
+        flow = f
+        val sid = f.run(phrase, onDone = { if (flow === f) flow = null; ListeningPopup.end(); listenForWakeWord() })
+        ListeningPopup.start(this, phrase, sid, onUserCancel = {
+            // pop-up dismissed by the user → same single teardown, then back to the wake word
+            if (flow === f) { f.reset("pop-up dismissed"); flow = null; listenForWakeWord() }
+        })
     }
 
     private fun buildNotification(): Notification {
@@ -117,7 +123,7 @@ class WakeWordService : Service() {
 
     override fun onDestroy() {
         if (MicCoordinator.owner === micOwner) MicCoordinator.owner = null
-        flow?.cancel()
+        flow?.reset("service stopped"); flow = null
         ListeningPopup.dismiss()
         engine.release()
         AppState.update { it.copy(listening = false, status = "Stopped") }

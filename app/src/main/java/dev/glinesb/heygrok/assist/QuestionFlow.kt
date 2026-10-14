@@ -12,62 +12,98 @@ import dev.glinesb.heygrok.wake.WakePhrase
 /**
  * One question, end to end, shared by every entry point (wake word, assistant overlay, tile, widget):
  * with a saved xAI key → one Grok Voice turn; otherwise → SpeechRecognizer, then AppRouter.
- * Caller must make sure the mic is free first (see [MicCoordinator]). Updates [AppState] as it goes.
+ * Caller must make sure the mic is free first (see [MicCoordinator]).
+ *
+ * Each [run] opens a new AppState session id; all state writes and callbacks are scoped to it, and
+ * [reset] (the single cancel/teardown path) makes anything that arrives later a no-op.
  */
 class QuestionFlow(private val context: Context, private val source: String) {
     private val settings = SecureSettings(context)
     private val speech = SpeechCapture(context)
     private var voice: GrokVoiceSession? = null
+    @Volatile private var sid = 0L
+    @Volatile private var active = false
+    private var onDone: (() -> Unit)? = null
+
+    /** Session id of the running question (0 if none). */
+    val sessionId: Long get() = if (active) sid else 0L
 
     /**
-     * [onDone] is called exactly once, on any thread, when the turn has finished.
+     * [onDone] is called at most once, on any thread, when the turn has finished (not after [reset]).
      * With [deliver], the transcript is handed to the caller (which routes and finishes) instead of AppRouter;
      * in that case [onDone] is only called for errors and Grok Voice turns.
      */
-    fun run(phrase: WakePhrase, onDone: () -> Unit, deliver: ((String) -> Unit)? = null) {
+    fun run(phrase: WakePhrase, onDone: () -> Unit, deliver: ((String) -> Unit)? = null): Long {
+        if (active) reset("superseded")
+        val id = AppState.beginSession()
+        sid = id; active = true; this.onDone = onDone
         val key = settings.apiKey
-        HgLog.i("flow[$source]: start ($phrase, mode=${if (key != null) "grok-voice" else "stt"})")
-        AppState.update { it.copy(capturing = true) }
-        val done = { AppState.update { it.copy(capturing = false) }; onDone() }
-        if (key != null) { runVoice(key, done); return }
-        AppState.update { it.copy(status = "Starting speech recognizer…", partial = null, sendingTo = null) }
-        speech.capture(object : SpeechCapture.Callback {
-            override fun onListening(engine: String) =
-                AppState.update { it.copy(status = "Speak your question ($engine recognizer)…") }
-            override fun onPartial(text: String) = AppState.update { it.copy(partial = text) }
-            override fun onRms(db: Float) = AppState.update { it.copy(rms = db) }
+        HgLog.i("flow[$source] s$id: start ($phrase, mode=${if (key != null) "grok-voice" else "stt"})")
+        if (key != null) { runVoice(id, key); return id }
+        AppState.updateIf(id) { it.copy(status = "Starting speech recognizer…") }
+        speech.capture(id, object : SpeechCapture.Callback {
+            override fun onListening(engine: String) { if (live(id)) AppState.updateIf(id) { it.copy(status = "Speak your question ($engine recognizer)…") } }
+            override fun onPartial(text: String) { if (live(id)) AppState.updateIf(id) { it.copy(partial = text) } }
+            override fun onRms(db: Float) { if (live(id)) AppState.updateIf(id) { it.copy(rms = db) } }
             override fun onResult(text: String) {
-                AppState.update { it.copy(capturing = false) }
-                if (deliver != null) { HgLog.i("flow[$source]: transcript='$text' → caller"); deliver(text); return }
-                HgLog.i("flow[$source]: question='$text' → routing")
-                AppState.update { it.copy(lastQuestion = text, partial = null, status = "Routing…") }
-                AppRouter(context).route(text, phrase)
-                done()
+                if (!live(id)) { HgLog.w("flow[$source] s$id: dropped stale result"); return }
+                AppState.updateIf(id) { it.copy(capturing = false, partial = null) }
+                if (deliver != null) { HgLog.i("flow[$source] s$id: transcript='$text' → caller"); active = false; this@QuestionFlow.onDone = null; deliver(text); return }
+                HgLog.i("flow[$source] s$id: question='$text' → routing")
+                AppState.updateIf(id) { it.copy(lastQuestion = text, status = "Routing…") }
+                AppRouter(context).route(text, phrase, id)
+                finish(id)
             }
             override fun onError(message: String) {
-                HgLog.w("flow[$source]: speech failed: $message")
-                AppState.update { it.copy(status = "$message — try again", partial = null) }
-                done()
+                if (!live(id)) return
+                HgLog.w("flow[$source] s$id: speech failed: $message")
+                AppState.updateIf(id) { it.copy(status = "$message — try again") }
+                finish(id)
             }
         })
+        return id
     }
 
-    private fun runVoice(key: String, onDone: () -> Unit) {
-        AppState.update { it.copy(status = "Connecting to Grok Voice…", lastQuestion = "(voice)", lastResult = null) }
+    private fun live(id: Long) = active && sid == id
+
+    private fun finish(id: Long) {
+        if (!live(id)) return
+        active = false
+        AppState.endSession(id)
+        val d = onDone; onDone = null
+        HgLog.d("flow[$source] s$id: done")
+        d?.invoke()
+    }
+
+    private fun runVoice(id: Long, key: String) {
+        AppState.updateIf(id) { it.copy(status = "Connecting to Grok Voice…", lastQuestion = "(voice)") }
         voice = GrokVoiceSession(key, settings.voice, object : GrokVoiceSession.Listener {
-            override fun onStatus(text: String) = AppState.update { it.copy(status = text) }
-            override fun onUserTranscript(text: String) = AppState.update { it.copy(lastQuestion = text) }
-            override fun onAssistantTranscript(text: String) = AppState.update { it.copy(lastResult = text) }
+            override fun onStatus(text: String) { if (live(id)) AppState.updateIf(id) { it.copy(status = text) } }
+            override fun onUserTranscript(text: String) { if (live(id)) AppState.updateIf(id) { it.copy(lastQuestion = text) } }
+            override fun onAssistantTranscript(text: String) { if (live(id)) AppState.updateIf(id) { it.copy(lastResult = text) } }
             override fun onFinished(error: String?) {
+                if (!live(id)) return
                 voice = null
-                HgLog.i("flow[$source]: grok voice finished${error?.let { " ($it)" } ?: ""}")
-                if (error != null) AppState.update { it.copy(status = error) }
-                onDone()
+                HgLog.i("flow[$source] s$id: grok voice finished${error?.let { " ($it)" } ?: ""}")
+                if (error != null) AppState.updateIf(id) { it.copy(status = error) }
+                finish(id)
             }
         }).also { it.start() }
     }
 
-    fun cancel() { speech.cancel(); voice?.cancel(); voice = null; AppState.update { it.copy(capturing = false) } }
+    /**
+     * The single teardown for every cancel/dismiss path (overlay dismiss, back, tap outside, pop-up tap,
+     * timeouts, superseded by a new wake). Stops STT / Grok Voice, ends the session in AppState and makes
+     * every late callback a no-op. Does not call onDone. Safe to call repeatedly.
+     */
+    fun reset(reason: String) {
+        val id = sid
+        if (active) HgLog.i("flow[$source] s$id: reset ($reason)")
+        active = false; onDone = null
+        speech.cancel()
+        voice?.cancel(); voice = null
+        if (id != 0L) AppState.endSession(id)
+    }
 }
 
 /**

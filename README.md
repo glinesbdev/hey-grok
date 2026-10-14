@@ -89,6 +89,13 @@ Hey Grok keeps listening while you talk:
 
 This applies to the wake word, the overlay, the notification and the bubble. Logs: `stt: timers reset`, `stt: restart #n`, `stt: speech began`. The pop-ups clear the navigation bar (gesture or 3-button), display cutouts and the keyboard, in portrait and landscape.
 
+### One question per session
+
+Every wake or launch starts a new session id (`s1`, `s2`, … in the logs) with an empty transcript and an empty pop-up.
+- **Cancelling resets the session:** dismissing the pop-up or overlay, back, tapping outside, an error, a timeout, or a finished hand-off all go through one `reset()`.
+- **Late events are ignored:** anything that arrives later from an old recognizer or session is dropped.
+- **Every hand-off is unique:** each one to Grok or Grok Bot carries a unique intent identity, so Android can't bring back an old share screen that still holds the previous message.
+
 ### Which app gets the question
 
 - **"Hey Grok" / "Hey Grok Bot"** always go to Grok / Grok Bot respectively.

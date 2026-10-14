@@ -19,10 +19,27 @@ object AppState {
         val sendingTo: String? = null,
         /** True while a question is being captured (STT or Grok Voice); pop-up timers never fire meanwhile. */
         val capturing: Boolean = false,
+        /** Id of the current question session; UI and callbacks ignore anything from another id. */
+        val session: Long = 0,
     )
 
     private val _state = MutableStateFlow(State())
     val state: StateFlow<State> = _state.asStateFlow()
 
     fun update(block: (State) -> State) = _state.update(block)
+
+    private val nextSession = java.util.concurrent.atomic.AtomicLong(0)
+
+    /** New question: fresh id, and every per-question field cleared so nothing is replayed. */
+    fun beginSession(): Long {
+        val id = nextSession.incrementAndGet()
+        _state.update { it.copy(session = id, partial = null, lastQuestion = null, lastResult = null, sendingTo = null, rms = -2f, capturing = true) }
+        return id
+    }
+
+    /** Update only if [id] is still the current session (drops stale callbacks). */
+    fun updateIf(id: Long, block: (State) -> State) = _state.update { if (it.session == id) block(it) else it }
+
+    /** End/cancel [id]: stop capturing and clear the live transcript (keeps lastQuestion for the main screen). */
+    fun endSession(id: Long) = updateIf(id) { it.copy(capturing = false, partial = null, rms = -2f) }
 }

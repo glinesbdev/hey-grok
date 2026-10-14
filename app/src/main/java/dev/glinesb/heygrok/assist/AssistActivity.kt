@@ -44,6 +44,7 @@ import dev.glinesb.heygrok.wake.WakeWordService
  */
 class AssistActivity : ComponentActivity() {
     private var flow: QuestionFlow? = null
+    private var sid = 0L
     private var borrowed = false
     private val main = Handler(Looper.getMainLooper())
     private val router by lazy { AppRouter(this) }
@@ -80,12 +81,15 @@ class AssistActivity : ComponentActivity() {
         // Chips are pointless when the answer stays in this app (Grok Voice key or "Always answer in this app").
         val showChips = !settings.hasApiKey && !settings.alwaysAnswerInApp
         HgLog.i("overlay: target setting=$setting extra=$forced preselected=${selected.value} chips=$showChips")
+        onBackPressedDispatcher.addCallback(this, object : androidx.activity.OnBackPressedCallback(true) {
+            override fun handleOnBackPressed() { reset("back"); finish() }
+        })
         ask()
         setContent {
             HeyGrokTheme {
                 val st by AppState.state.collectAsStateWithLifecycle()
                 Box(
-                    Modifier.fillMaxSize().clickable(remember { MutableInteractionSource() }, null) { finish() },
+                    Modifier.fillMaxSize().clickable(remember { MutableInteractionSource() }, null) { reset("tap outside"); finish() },
                     contentAlignment = Alignment.BottomCenter,
                 ) {
                     Card(
@@ -100,7 +104,7 @@ class AssistActivity : ComponentActivity() {
                             Text("Hey Grok", style = MaterialTheme.typography.titleLarge)
                             if (awaitingChoice.value) Text("Send to which app?", style = MaterialTheme.typography.titleMedium)
                             else Text(st.status)
-                            (pendingQuestion ?: st.partial)?.let { Text("“$it”", style = MaterialTheme.typography.bodyLarge) }
+                            (pendingQuestion ?: st.partial.takeIf { st.session == sid })?.let { Text("“$it”", style = MaterialTheme.typography.bodyLarge) }
                             if (showChips) TargetChips(prominent = selected.value == null)
                             if (!awaitingChoice.value) LinearProgressIndicator(Modifier.fillMaxWidth())
                         }
@@ -140,12 +144,36 @@ class AssistActivity : ComponentActivity() {
         pendingQuestion?.let { routeNow(it, phrase, "chip") }
     }
 
+    /**
+     * The single teardown for this overlay: back, tap outside, routing complete, error, timeout,
+     * re-launch with a new intent, destroy. Drops the flow's session so nothing late can leak in.
+     */
+    private fun reset(reason: String) {
+        if (sid != 0L) HgLog.i("overlay s$sid: reset ($reason)")
+        main.removeCallbacks(timeout)
+        flow?.reset(reason); flow = null
+        pendingQuestion = null; awaitingChoice.value = false; routed = false
+        sid = 0L
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        // singleTask: a new assistant / widget launch while we're still up → start a fresh question.
+        HgLog.i("overlay: onNewIntent action=${intent.action}")
+        setIntent(intent)
+        reset("new launch")
+        if (intent.action != ACTION_TOGGLE) {
+            selected.value = (LaunchTarget.parse(intent.getStringExtra(EXTRA_TARGET)) ?: SecureSettings(this).launchTarget).phrase
+            ask()
+        }
+    }
+
     private fun ask() {
-        MicCoordinator.borrow(); borrowed = MicCoordinator.owner != null
+        if (!borrowed) { MicCoordinator.borrow(); borrowed = MicCoordinator.owner != null }
         flow = QuestionFlow(this, "overlay").also { f ->
-            f.run(selected.value ?: WakePhrase.HEY_GROK,
+            sid = f.run(selected.value ?: WakePhrase.HEY_GROK,
                 onDone = { runOnUiThread { HgLog.i("overlay: flow done"); if (pendingQuestion == null) finish() } },
-                deliver = { text -> runOnUiThread { onTranscript(text) } })
+                deliver = { text -> val my = sid; runOnUiThread { if (my == sid) onTranscript(text) else HgLog.w("overlay: dropped stale transcript") } })
         }
     }
 
@@ -170,13 +198,13 @@ class AssistActivity : ComponentActivity() {
         routed = true; main.removeCallbacks(timeout); pendingQuestion = null; awaitingChoice.value = false
         HgLog.i("overlay: routing to $phrase ($why)")
         AppState.update { it.copy(lastQuestion = question, partial = null, status = "Routing…") }
-        router.route(question, phrase)
+        router.route(question, phrase, sid)
+        reset("routed")
         finish()
     }
 
     override fun onDestroy() {
-        main.removeCallbacks(timeout)
-        flow?.cancel(); flow = null
+        reset("destroyed")
         if (borrowed) { borrowed = false; MicCoordinator.giveBack() }
         super.onDestroy()
     }
