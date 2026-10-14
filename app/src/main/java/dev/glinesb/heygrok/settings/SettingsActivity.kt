@@ -17,10 +17,15 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.ui.unit.dp
+import dev.glinesb.heygrok.HgLog
+import dev.glinesb.heygrok.assist.AssistantRole
 
 /** Optional Grok Voice mode: enter your own xAI key (stored encrypted) and pick a voice. */
 class SettingsActivity : ComponentActivity() {
+    private lateinit var requestRole: () -> Unit
+
     override fun onCreate(savedInstanceState: Bundle?) {
+        requestRole = AssistantRole.registerRequester(this) { HgLog.i("settings: role held=$it") }
         enableEdgeToEdge()
         super.onCreate(savedInstanceState)
         val settings = SecureSettings(this)
@@ -38,6 +43,13 @@ class SettingsActivity : ComponentActivity() {
                                 Text("Don't hand off to Grok / Grok Bot. Answers need an xAI API key (below).")
                             }
                             Switch(checked = inApp, onCheckedChange = { inApp = it; settings.alwaysAnswerInApp = it })
+                        }
+                        HorizontalDivider()
+                        Text("Default digital assistant", style = MaterialTheme.typography.titleMedium)
+                        var held by remember { mutableStateOf(AssistantRole.isHeld(this@SettingsActivity)) }
+                        Text(if (held) "Hey Grok is the default assistant." else "Long-press home / corner swipe opens another assistant.")
+                        OutlinedButton(onClick = { requestRole(); held = AssistantRole.isHeld(this@SettingsActivity) }) {
+                            Text(if (held) "Change in system settings" else "Set as default assistant")
                         }
                         HorizontalDivider()
                         Text("Grok Voice (optional)", style = MaterialTheme.typography.headlineSmall)

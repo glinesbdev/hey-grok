@@ -1,3 +1,4 @@
 <resources>
     <string name="app_name">Hey Grok</string>
+    <string name="widget_description">Ask Grok with one tap, and turn the "Hey Grok" wake word on or off.</string>
 </resources>

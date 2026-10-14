@@ -43,6 +43,65 @@
             android:name=".settings.SettingsActivity"
             android:exported="false" />
 
+        <activity
+            android:name=".assist.AssistActivity"
+            android:exported="false"
+            android:excludeFromRecents="true"
+            android:launchMode="singleTask"
+            android:taskAffinity="dev.glinesb.heygrok.assist"
+            android:theme="@style/Theme.HeyGrok.Overlay" />
+
+        <!-- Default digital assistant: long-press home / corner swipe -->
+        <service
+            android:name=".assist.HeyGrokInteractionService"
+            android:exported="true"
+            android:label="@string/app_name"
+            android:permission="android.permission.BIND_VOICE_INTERACTION">
+            <intent-filter>
+                <action android:name="android.service.voice.VoiceInteractionService" />
+            </intent-filter>
+            <meta-data android:name="android.voice_interaction" android:resource="@xml/interaction_service" />
+        </service>
+        <service
+            android:name=".assist.HeyGrokSessionService"
+            android:exported="true"
+            android:permission="android.permission.BIND_VOICE_INTERACTION" />
+        <!-- Required by VoiceInteractionService; proxies to Google's recognizer so voice input keeps working. -->
+        <service
+            android:name=".speech.HeyGrokRecognitionService"
+            android:exported="true"
+            android:label="@string/app_name">
+            <intent-filter>
+                <action android:name="android.speech.RecognitionService" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+            <meta-data android:name="android.speech" android:resource="@xml/recognition_service" />
+        </service>
+
+        <!-- Quick Settings tile -->
+        <service
+            android:name=".tile.ListeningTileService"
+            android:exported="true"
+            android:icon="@android:drawable/ic_btn_speak_now"
+            android:label="Hey Grok"
+            android:permission="android.permission.BIND_QUICK_SETTINGS_TILE">
+            <intent-filter>
+                <action android:name="android.service.quicksettings.action.QS_TILE" />
+            </intent-filter>
+            <meta-data android:name="android.service.quicksettings.TOGGLEABLE_TILE" android:value="true" />
+        </service>
+
+        <!-- Home-screen widget (Glance) -->
+        <receiver
+            android:name=".widget.HeyGrokWidgetReceiver"
+            android:exported="true"
+            android:label="Hey Grok">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/hey_grok_widget" />
+        </receiver>
+
         <service
             android:name=".wake.WakeWordService"
             android:exported="false"

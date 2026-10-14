@@ -22,6 +22,7 @@ import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import android.content.Intent
+import dev.glinesb.heygrok.assist.AssistantRole
 import dev.glinesb.heygrok.router.AppRouter
 import dev.glinesb.heygrok.router.MissingAppButtons
 import dev.glinesb.heygrok.settings.SecureSettings
@@ -29,10 +30,16 @@ import dev.glinesb.heygrok.settings.SettingsActivity
 import dev.glinesb.heygrok.wake.WakeWordService
 
 class MainActivity : ComponentActivity() {
+    private val roleHeld = mutableStateOf(false)
+    private lateinit var requestRole: () -> Unit
+
+    override fun onResume() { super.onResume(); roleHeld.value = AssistantRole.isHeld(this) }
+
     override fun onCreate(savedInstanceState: Bundle?) {
+        requestRole = AssistantRole.registerRequester(this) { roleHeld.value = it }
         enableEdgeToEdge()
         super.onCreate(savedInstanceState)
-        setContent { HeyGrokTheme { Surface { HomeScreen() } } }
+        setContent { HeyGrokTheme { Surface { HomeScreen(roleHeld.value, requestRole) } } }
     }
 }
 
@@ -42,7 +49,7 @@ private val requiredPermissions: Array<String> = buildList {
 }.toTypedArray()
 
 @Composable
-private fun HomeScreen() {
+private fun HomeScreen(roleHeld: Boolean, requestRole: () -> Unit) {
     val context = LocalContext.current
     val state by AppState.state.collectAsStateWithLifecycle()
     val router = remember { AppRouter(context) }
@@ -81,6 +88,11 @@ private fun HomeScreen() {
         }
         Text("Status: ${state.status}")
         state.partial?.let { Text("Hearing: “$it”", style = MaterialTheme.typography.bodyLarge) }
+
+        Text("Digital assistant", style = MaterialTheme.typography.titleMedium)
+        Text(if (roleHeld) "✅ Hey Grok is your default assistant (long-press home / corner swipe)"
+             else "— Not the default assistant. Making it the default enables long-press home and opening Grok with the app closed.")
+        if (!roleHeld) Button(onClick = requestRole) { Text("Set as default assistant") }
 
         Text("Detected apps", style = MaterialTheme.typography.titleMedium)
         listOf(AppRouter.GROK, AppRouter.GROK_BOT).forEach { t ->

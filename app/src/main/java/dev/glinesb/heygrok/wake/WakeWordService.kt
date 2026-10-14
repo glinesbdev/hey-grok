@@ -10,17 +10,16 @@ import android.content.Intent
 import android.content.pm.ServiceInfo
 import android.os.Build
 import android.os.IBinder
-import android.util.Log
 import androidx.core.app.NotificationCompat
 import androidx.core.app.ServiceCompat
 import androidx.core.content.ContextCompat
 import dev.glinesb.heygrok.AppState
 import dev.glinesb.heygrok.HgLog
 import dev.glinesb.heygrok.MainActivity
-import dev.glinesb.heygrok.router.AppRouter
-import dev.glinesb.heygrok.settings.SecureSettings
-import dev.glinesb.heygrok.speech.SpeechCapture
-import dev.glinesb.heygrok.voice.GrokVoiceSession
+import dev.glinesb.heygrok.assist.AssistantRole
+import dev.glinesb.heygrok.assist.MicCoordinator
+import dev.glinesb.heygrok.assist.QuestionFlow
+import dev.glinesb.heygrok.widget.WidgetUpdater
 
 /**
  * Foreground service (type=microphone) that keeps the wake-word engine running.
@@ -33,21 +32,23 @@ import dev.glinesb.heygrok.voice.GrokVoiceSession
 class WakeWordService : Service() {
 
     private lateinit var engine: WakeWordEngine
-    private lateinit var speech: SpeechCapture
-    private lateinit var router: AppRouter
-    private lateinit var settings: SecureSettings
-    private var voiceSession: GrokVoiceSession? = null
+    private var flow: QuestionFlow? = null
+    @Volatile private var paused = false
+
+    private val micOwner = object : MicCoordinator.Owner {
+        override fun pauseForCapture() { paused = true; flow?.cancel(); flow = null; engine.stop() }
+        override fun resumeAfterCapture() { paused = false; listenForWakeWord() }
+    }
 
     override fun onCreate() {
         super.onCreate()
         engine = OpenWakeWordEngine(this)
-        speech = SpeechCapture(this)
-        router = AppRouter(this)
-        settings = SecureSettings(this)
+        MicCoordinator.owner = micOwner
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         if (intent?.action == ACTION_STOP) {
+            HgLog.i("service: stop requested")
             stopSelf()
             return START_NOT_STICKY
         }
@@ -59,19 +60,21 @@ class WakeWordService : Service() {
             )
         } catch (e: Exception) {
             // e.g. ForegroundServiceStartNotAllowedException / SecurityException on 14+
-            Log.e(TAG, "startForeground failed", e)
+            HgLog.e("service: startForeground failed", e)
             AppState.update { it.copy(listening = false, status = "Can't start: ${e.message}") }
             stopSelf()
             return START_NOT_STICKY
         }
         listenForWakeWord()
+        WidgetUpdater.refresh(this)
         // Not sticky: a system restart from background would violate Android 14 FGS rules.
         return START_NOT_STICKY
     }
 
     private fun listenForWakeWord() {
+        if (paused) return
         HgLog.i("service: listening for wake word")
-        AppState.update { st -> st.copy(listening = true, status = if (st.status.contains("again")) st.status else "Listening for \"Hey Grok\"") }
+        AppState.update { st -> st.copy(listening = true, status = if (st.status.contains("try again")) st.status else "Listening for \"Hey Grok\"") }
         engine.start(
             onWake = { phrase -> onWake(phrase) },
             onError = { e -> AppState.update { it.copy(status = "Wake word error: ${e.message}") } },
@@ -79,42 +82,11 @@ class WakeWordService : Service() {
     }
 
     private fun onWake(phrase: WakePhrase) {
-        // Release the mic so SpeechRecognizer can use it.
-        engine.stop()
-        val key = settings.apiKey
-        if (key != null) { startGrokVoice(key); return }   // optional paid mode
-        AppState.update { it.copy(status = "Wake ($phrase) — starting speech recognizer…", partial = null) }
-        speech.capture(object : SpeechCapture.Callback {
-            override fun onListening(engine: String) =
-                AppState.update { it.copy(status = "Speak your question ($engine recognizer)…") }
-            override fun onPartial(text: String) = AppState.update { it.copy(partial = text) }
-            override fun onResult(text: String) {
-                HgLog.i("service: question='$text' → routing ($phrase)")
-                AppState.update { it.copy(lastQuestion = text, partial = null, status = "Routing…") }
-                router.route(text, phrase)
-                listenForWakeWord()
-            }
-            override fun onError(message: String) {
-                HgLog.w("service: speech failed: $message — resuming wake word")
-                AppState.update { it.copy(status = "$message — say \"Hey Grok\" again", partial = null) }
-                listenForWakeWord()
-            }
-        })
-    }
-
-    /** Paid Grok Voice turn with the user's own key; afterwards resume wake-word listening. */
-    private fun startGrokVoice(key: String) {
-        AppState.update { it.copy(status = "Connecting to Grok Voice…", lastQuestion = "(voice)", lastResult = null) }
-        voiceSession = GrokVoiceSession(key, settings.voice, object : GrokVoiceSession.Listener {
-            override fun onStatus(text: String) = AppState.update { it.copy(status = text) }
-            override fun onUserTranscript(text: String) = AppState.update { it.copy(lastQuestion = text) }
-            override fun onAssistantTranscript(text: String) = AppState.update { it.copy(lastResult = text) }
-            override fun onFinished(error: String?) {
-                voiceSession = null
-                if (error != null) AppState.update { it.copy(status = error) }
-                listenForWakeWord()
-            }
-        }).also { it.start() }
+        engine.stop() // the engine already released the mic before calling us
+        // When we hold the assistant role, the system keeps our VoiceInteractionService bound, which
+        // lets the hand-off start Grok / Grok Bot even with the app closed (see ARCHITECTURE.md).
+        HgLog.i("service: wake $phrase (assistant role held=${AssistantRole.isHeld(this)})")
+        flow = QuestionFlow(this, "wake").also { f -> f.run(phrase) { flow = null; listenForWakeWord() } }
     }
 
     private fun buildNotification(): Notification {
@@ -140,10 +112,11 @@ class WakeWordService : Service() {
     }
 
     override fun onDestroy() {
-        voiceSession?.cancel()
-        speech.cancel()
+        if (MicCoordinator.owner === micOwner) MicCoordinator.owner = null
+        flow?.cancel()
         engine.release()
         AppState.update { it.copy(listening = false, status = "Stopped") }
+        WidgetUpdater.refresh(this)
         super.onDestroy()
     }
 
@@ -153,7 +126,7 @@ class WakeWordService : Service() {
         private const val TAG = "WakeWordService"
         private const val CHANNEL = "wake_word"
         private const val NOTIF_ID = 42
-        private const val ACTION_STOP = "dev.glinesb.heygrok.STOP"
+        const val ACTION_STOP = "dev.glinesb.heygrok.STOP"
 
         /** Call only while an activity is visible (Android 14 FGS rule). */
         fun start(context: Context) =

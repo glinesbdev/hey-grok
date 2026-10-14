@@ -34,6 +34,8 @@ dependencies {
     implementation("androidx.compose.material3:material3")
     implementation("com.microsoft.onnxruntime:onnxruntime-android:1.20.0")
     implementation("com.squareup.okhttp3:okhttp:4.12.0")
+    implementation("androidx.glance:glance-appwidget:1.1.1")
+    implementation("androidx.glance:glance-material3:1.1.1")
     implementation("androidx.security:security-crypto:1.1.0-alpha06")
     testImplementation("junit:junit:4.13.2")
     // Desktop ONNX Runtime (same ai.onnxruntime API) so the pipeline runs in JVM unit tests.

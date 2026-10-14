@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<voice-interaction-service xmlns:android="http://schemas.android.com/apk/res/android"
+    android:sessionService="dev.glinesb.heygrok.assist.HeyGrokSessionService"
+    android:recognitionService="dev.glinesb.heygrok.speech.HeyGrokRecognitionService"
+    android:settingsActivity="dev.glinesb.heygrok.settings.SettingsActivity"
+    android:supportsAssist="true"
+    android:supportsLaunchVoiceAssistFromKeyguard="false"
+    android:supportsLocalInteraction="false" />

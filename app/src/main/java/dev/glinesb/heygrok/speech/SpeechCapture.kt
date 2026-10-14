@@ -64,7 +64,8 @@ class SpeechCapture(
         val engine = if (onDevice) "on-device" else "default"
         val r = try {
             if (onDevice) SpeechRecognizer.createOnDeviceSpeechRecognizer(context)
-            else SpeechRecognizer.createSpeechRecognizer(context)
+            else Recognizers.external(context)?.let { HgLog.d("stt: default → $it"); SpeechRecognizer.createSpeechRecognizer(context, it) }
+                ?: SpeechRecognizer.createSpeechRecognizer(context) // never our own proxy if a real one exists
         } catch (e: Exception) {
             HgLog.e("stt: create $engine failed", e)
             if (onDevice) { start(cb, preferOnDevice = false); return }

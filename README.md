@@ -52,6 +52,21 @@ your question, and plays `response.output_audio.delta` through `AudioTrack`.
 in Settings to go back to the free path: on-device speech-to-text, then the Grok / Grok Bot app.
 The same key also powers the text fallback screen used when neither app is installed.
 
+## Ways to ask (Pixel / Android 10+)
+
+| Entry point | How to enable | Notes |
+|---|---|---|
+| **"Hey Grok" wake word** | Main screen → turn on **Listening** | Mic foreground service with a persistent notification. |
+| **Default digital assistant** (long-press the home bar / swipe up from a bottom corner) | Main screen or Settings → **Set as default assistant**. Android opens *Settings → Apps → Default apps → Digital assistant app*; pick **Hey Grok** | Opens a translucent Hey Grok overlay that listens for your question. While Hey Grok holds this role, Android also lets the wake-word hand-off open Grok / Grok Bot **with the app closed**. Everything else works without the role. |
+| **Quick Settings tile** | Pull down Quick Settings twice → ✏️ **Edit** → drag **Hey Grok** into your tiles | Tap to turn the wake word on or off; the tile shows its state. Without the assistant role, turning it *on* briefly flashes the overlay (Android requires a visible screen to start mic access from a tile). |
+| **Home-screen widget** | Long-press the home screen → **Widgets** → **Hey Grok** → drag it out | 🎙 asks one question right away (opens the overlay). **On/Off** toggles the wake word. Follows Material You colors and light/dark. |
+
+**Android restrictions this works around** (from the official Android docs):
+- Only widget and notification interactions, or an app providing the `VoiceInteractionService`, may start a **microphone** service without a visible screen. Quick Settings tile clicks may not.
+- Starting another app's activity from the background is blocked unless the system binds one of our services, such as the assistant's `VoiceInteractionService`.
+
+When Hey Grok becomes the assistant, Android may also route other apps' voice typing through Hey Grok's recognition service. That service is a pass-through to Google's recognizer, so voice input elsewhere keeps working.
+
 ## Troubleshooting
 
 Logs for the whole pipeline go to one tag:
@@ -65,6 +80,7 @@ the recognizer callbacks (`stt[on-device]: onReadyForSpeech`, `onPartialResults`
 and `router: …`. If the on-device recognizer fails (for example, the language pack isn't downloaded), the app
 retries with the default recognizer. If nothing is heard within 12 s, it goes back to wake-word listening and
 the error appears on the main screen.
+Other tags in the same log: `assist:` (assistant session), `overlay:`, `tile:`, `widget:`, `role:`, `mic:` (wake word paused/resumed for a one-shot question) and `recog-proxy:`.
 
 On Pixels, speech recognition comes from Speech Services by Google / Android System Intelligence. If recognition never
 starts, make sure that app is updated and the offline language pack for your language is downloaded.
@@ -78,7 +94,8 @@ starts, make sure that app is updated and the offline language pack for your lan
 | App detection + ACTION_SEND / launch routing | Implemented (ACTION_SEND support in Grok apps not verified) |
 | xAI text fallback (`XaiClient`) | Minimal: blocking, no streaming/history; uses the Settings key |
 | Grok Voice mode (`GrokVoiceSession`) | Implemented, one turn per wake word; not yet tested against the live API |
-| Default assistant role (VoiceInteractionService) | Documented only |
+| Default assistant role (VoiceInteractionService + session overlay) | Implemented; untested on device |
+| Quick Settings tile, Glance home-screen widget | Implemented; untested on device |
 
 CI: `.github/workflows/android.yml` runs `./gradlew assembleDebug` on every push/PR.
 

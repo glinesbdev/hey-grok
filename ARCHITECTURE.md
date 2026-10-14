@@ -15,7 +15,12 @@ flowchart TD
     D -->|Grok Bot ai.x.grok.bot| B[ACTION_SEND text<br/>or launch intent]
     D -->|neither| F[ResultActivity overlay<br/>XaiClient → api.x.ai]
     STT -.->|done| WW
-    AS[Optional: VoiceInteractionService<br/>RoleManager.ROLE_ASSISTANT] -.->|long-press home / corner swipe| STT
+    AS[HeyGrokInteractionService<br/>ROLE_ASSISTANT] -->|long-press home / corner swipe| SES[HeyGrokSession]
+    SES -->|startAssistantActivity| OV[AssistActivity<br/>translucent overlay]
+    WID[Glance widget 🎙] --> OV
+    TILE[Quick Settings tile] -->|role held: direct| SVC
+    TILE -->|no role: startActivityAndCollapse| OV
+    OV -->|MicCoordinator pauses wake word| QF[QuestionFlow<br/>STT or Grok Voice → AppRouter]
 ```
 
 ## Flow
@@ -60,10 +65,23 @@ flowchart TD
 - **Passing the question in.** Neither Grok app documents a deep link that accepts a
   query. `ACTION_SEND` support is untested; otherwise we only open the app.
 
-## Optional: default assistant role
+## Default assistant role, tile and widget
 
-Use a `VoiceInteractionService` + `VoiceInteractionSessionService` (declared with
-`android.permission.BIND_VOICE_INTERACTION` and an `<voice-interaction-service>` XML)
-and ask for `RoleManager.ROLE_ASSISTANT` via `roleManager.createRequestRoleIntent(...)`.
-This lets long-press home or the corner swipe open our session directly (no wake word),
-and it also helps with background-start limits. It's not implemented yet.
+- **Assistant role.** `HeyGrokInteractionService` (`VoiceInteractionService`) plus `HeyGrokSessionService`/`HeyGrokSession`,
+  declared through `res/xml/interaction_service.xml`. The user grants it in *Default apps → Digital assistant app*.
+  `ROLE_ASSISTANT` isn't requestable through the role dialog, so we try `RoleManager.createRequestRoleIntent` and then fall back
+  to the system settings screen. `onShow` launches `AssistActivity` with `startAssistantActivity`, and `AssistActivity` runs
+  the same `QuestionFlow` the wake word uses.
+- **Why the role matters for the wake word.** While we hold it, the system keeps our `VoiceInteractionService` bound. A
+  system-bound VoiceInteractionService is exempt from background-activity-start limits, so `AppRouter` can open Grok / Grok Bot
+  after a wake word with the app closed. It's also exempt from while-in-use limits, so the tile can start the mic service
+  directly. Without the role everything still works; the hand-off just needs Hey Grok to be visible (or uses its own answer screen).
+- **Recognition service.** A `VoiceInteractionService` must declare one, and the system may make it the device default.
+  `HeyGrokRecognitionService` is therefore a transparent proxy to Google's recognizer, and our own `SpeechCapture` always
+  targets an external recognizer explicitly.
+- **One mic at a time.** `MicCoordinator` lets the overlay, widget or tile pause the wake-word engine (releasing `AudioRecord`),
+  run one question, and resume it.
+- **Tile.** `ListeningTileService` toggles the service. Tile clicks aren't a while-in-use exemption, so without the role it
+  starts the service through the translucent activity (`startActivityAndCollapse`, using `unlockAndRun` when the phone is locked).
+- **Widget.** Glance `HeyGrokWidget`. The toggle uses `actionStartService` (widget interactions are a while-in-use exemption),
+  and the mic button opens the overlay. `WidgetUpdater` refreshes the widget and the tile whenever listening starts or stops.
