@@ -76,6 +76,12 @@ object ListeningPopup {
         val cb = onUserCancel; dismiss(); cb?.invoke()
     }
 
+    /** Session id the pop-up is showing (for logs). */
+    val sessionId: Long get() = sid
+
+    /** What a freshly attached card should show: the current session's model, or the empty listening state. */
+    fun currentModel(): Model = last ?: Model("Listening · $target", "Speak now…", -2f, Phase.LISTENING)
+
     fun start(context: Context, phrase: WakePhrase, sessionId: Long, onUserCancel: () -> Unit) = main.post {
         dismiss()
         sid = sessionId; this.onUserCancel = onUserCancel
@@ -131,7 +137,10 @@ object ListeningPopup {
         else -> Model("Listening · $target", st.partial ?: if (target == "Grok Voice") st.lastResult ?: st.status else "Speak now…", st.rms, Phase.LISTENING)
     }
 
-    private fun render(m: Model) { last = m; surface?.render(m) }
+    private fun render(m: Model) {
+        if (m.text != last?.text || m.title != last?.title) HgLog.d("popup s$sid: render '${m.title}' / '${m.text.orEmpty().take(60)}'")
+        last = m; surface?.render(m)
+    }
 
     // ---- surfaces ----
 
@@ -140,7 +149,12 @@ object ListeningPopup {
         override fun show() {
             HeyGrokInteractionService.instance!!.showSession(Bundle().apply { putBoolean(HeyGrokSession.EXTRA_COMPACT, true) }, 0)
         }
-        override fun render(m: Model) { HeyGrokSession.compactCard?.render(m) }
+        private var warned = false
+        override fun render(m: Model) {
+            val card = HeyGrokSession.compactCard
+            if (card == null) { if (!warned) { warned = true; HgLog.d("popup: session card not attached yet; latest model will be applied on attach") }; return }
+            card.render(m)
+        }
         override fun dismiss() { HeyGrokSession.hideCompact() }
     }
 

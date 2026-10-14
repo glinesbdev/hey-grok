@@ -66,23 +66,35 @@ class HeyGrokSession(context: Context) : VoiceInteractionSession(context) {
         super.onPrepareShow(args, showFlags)
     }
 
-    override fun onCreateContentView(): View? {
-        if (!compact) return null
+    /** Container kept for the life of this session object; the card inside is replaced on every compact show. */
+    private var container: FrameLayout? = null
+
+    // The system REUSES a session object across shows and calls onCreateContentView only once, so the
+    // card must not be created/registered here — that left later wakes rendering into nothing while
+    // the window still showed the previous (cancelled) text. See attachFreshCard().
+    override fun onCreateContentView(): View = FrameLayout(context).apply {
+        setOnClickListener { ListeningPopup.userDismissed("card tap") }
+        applyPopupInsets("session")
+        container = this
+    }
+
+    /** New, empty card for this show, registered as the render target for the current pop-up session. */
+    private fun attachFreshCard() {
+        val c = container ?: (onCreateContentView() as FrameLayout).also { setContentView(it) }
         val card = PopupCardView(context)
-        ListeningPopup.last?.let(card::render)
+        c.removeAllViews()
+        c.addView(card, FrameLayout.LayoutParams(-1, -2))
         compactCard = card
-        return FrameLayout(context).apply {
-            addView(card, FrameLayout.LayoutParams(-1, -2))
-            setOnClickListener { ListeningPopup.userDismissed("card tap") }
-            applyPopupInsets("session")
-        }
+        val m = ListeningPopup.currentModel()
+        card.render(m)
+        HgLog.i("assist: compact card attached for popup s${ListeningPopup.sessionId} (session obj ${System.identityHashCode(this)}) '${m.title}'")
     }
 
     override fun onShow(args: Bundle?, showFlags: Int) {
         super.onShow(args, showFlags)
         current = this
         HgLog.i("assist: session onShow flags=$showFlags compact=$compact")
-        if (compact) return
+        if (compact) { attachFreshCard(); return }
         runCatching {
             startAssistantActivity(AssistActivity.askIntent(context).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
         }.onFailure { HgLog.e("assist: startAssistantActivity failed", it) }
@@ -93,7 +105,9 @@ class HeyGrokSession(context: Context) : VoiceInteractionSession(context) {
         // Hidden by the system (back, home, tap outside) while the compact pop-up was up → user cancel.
         if (compact && !hidingOurselves) ListeningPopup.userDismissed("session hidden by system")
         hidingOurselves = false
-        if (current === this) { current = null; compactCard = null }
+        if (current === this) current = null
+        // detach (not just forget) the old card so a reused window can never show its text again
+        container?.removeAllViews(); compactCard = null
         super.onHide()
     }
 
