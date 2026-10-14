@@ -15,8 +15,8 @@ import android.util.Log
  */
 class OpenWakeWordEngine(
     private val context: Context,
-    private val grokThreshold: Float = DEFAULT_THRESHOLD,
-    private val botThreshold: Float = DEFAULT_THRESHOLD,
+    private val grokThreshold: Float = WakeDecider.DEFAULT_GROK_THRESHOLD,
+    private val botThreshold: Float = WakeDecider.DEFAULT_BOT_THRESHOLD,
 ) : WakeWordEngine {
 
     private var pipeline: OwwPipeline? = null
@@ -85,6 +85,5 @@ class OpenWakeWordEngine(
 
     companion object {
         private const val TAG = "OpenWakeWordEngine"
-        const val DEFAULT_THRESHOLD = 0.5f
     }
 }

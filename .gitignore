@@ -24,3 +24,6 @@ training/models/
 training/features/
 training/out/
 *.npy
+
+# training logs
+training/logs/

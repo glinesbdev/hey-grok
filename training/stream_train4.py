@@ -1,7 +1,7 @@
 """~1 h continuous negative audio (held-out speakers, random sentences + confusables + noise) → sliding 16-frame windows."""
 import numpy as np, random
 from gen import tts, noise, feats, SR; from corpus import sentences, CONF
-rng = np.random.default_rng(44); r = random.Random(44); parts = []; total = 0
+rng = np.random.default_rng(54); r = random.Random(54); parts = []; total = 0
 from gen import VOICES
 while total < 3600 * SR:
     v = r.choice(list(VOICES)); n = 904 if v == "libritts_r" else 109
@@ -17,5 +17,5 @@ for i in range(0, len(audio), step):  # chunks with overlap so windows are conti
     e = F._get_embeddings(audio[i:i + step + 2 * SR])
     emb.append(e[: (step // 1280)] if i + step < len(audio) else e)
 E = np.concatenate(emb); W = np.lib.stride_tricks.sliding_window_view(E, (16, 96))[:, 0]
-np.save("features/train_stream.npy", W.astype(np.float32)); open("features/train_stream_hours.txt", "w").write(str(len(audio) / SR / 3600))
+np.save("features/train_stream4.npy", W.astype(np.float32)); open("features/train_stream4_hours.txt", "w").write(str(len(audio) / SR / 3600))
 print("stream", W.shape, len(audio) / SR / 3600)

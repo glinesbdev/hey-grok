@@ -29,7 +29,10 @@ class OwwPipelineTest {
 
     private fun detect(p: OwwPipeline, pcm: ShortArray): Pair<WakePhrase?, Map<String, Float>> {
         p.reset(); val d = WakeDecider(); val max = mutableMapOf<String, Float>(); var hit: WakePhrase? = null
-        val padded = ShortArray(pcm.size + OwwPipeline.SAMPLE_RATE) .also { pcm.copyInto(it) } // 1 s tail for the decider
+        // 2 s warm-up (the pipeline needs ~2 s before its first score, as after the app starts listening)
+        // + 1 s tail so the decider's patience / bot-wait window can complete.
+        val warm = 2 * OwwPipeline.SAMPLE_RATE
+        val padded = ShortArray(warm + pcm.size + OwwPipeline.SAMPLE_RATE).also { pcm.copyInto(it, warm) }
         for (i in 0 + OwwPipeline.FRAME..padded.size step OwwPipeline.FRAME) {
             val s = p.process(padded.copyOfRange(i - OwwPipeline.FRAME, i)) ?: continue
             s.forEach { (k, v) -> max[k] = maxOf(max[k] ?: 0f, v) }

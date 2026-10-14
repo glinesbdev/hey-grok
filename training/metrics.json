@@ -1,98 +1,172 @@
 {
  "hey_grok": {
   "0.3": {
-   "recall": 0.964,
-   "fa_rate_conf": 0.07133333333333333,
-   "fa_rate_conf_rand": 0.018,
-   "fa_rate_speech": 0.0026666666666666666,
-   "fa_rate_noise": 0.0,
-   "false_accepts_per_hour_stream": 82.97425925280228,
-   "false_accepts_per_hour_plain_speech": 81.76527970487498
-  },
-  "0.5": {
-   "recall": 0.9528,
-   "fa_rate_conf": 0.06533333333333333,
-   "fa_rate_conf_rand": 0.017333333333333333,
-   "fa_rate_speech": 0.0026666666666666666,
-   "fa_rate_noise": 0.0,
-   "false_accepts_per_hour_stream": 65.97953145403555,
-   "false_accepts_per_hour_plain_speech": 77.7767294753689
-  },
-  "0.7": {
-   "recall": 0.9456,
-   "fa_rate_conf": 0.06066666666666667,
-   "fa_rate_conf_rand": 0.016,
+   "recall": 0.9384,
+   "fa_rate_conf": 0.04,
+   "fa_rate_conf_rand": 0.016666666666666666,
    "fa_rate_speech": 0.0006666666666666666,
    "fa_rate_noise": 0.0,
-   "false_accepts_per_hour_stream": 57.982012489910026,
-   "false_accepts_per_hour_plain_speech": 61.822528557344505
+   "fa_per_hour_stream": 21.993177151345183,
+   "fa_per_hour_stream_speech": 3.9885502295060973
   },
-  "0.9": {
-   "recall": 0.9296,
-   "fa_rate_conf": 0.050666666666666665,
+  "0.5": {
+   "recall": 0.9144,
+   "fa_rate_conf": 0.03333333333333333,
    "fa_rate_conf_rand": 0.013333333333333334,
    "fa_rate_speech": 0.0006666666666666666,
    "fa_rate_noise": 0.0,
-   "false_accepts_per_hour_stream": 43.986354302690366,
-   "false_accepts_per_hour_plain_speech": 41.87977740981402
+   "fa_per_hour_stream": 19.993797410313803,
+   "fa_per_hour_stream_speech": 3.9885502295060973
   },
-  "n_pos_test": 1250,
-  "n_conf": 1500,
-  "n_conf_rand": 1500,
-  "n_speech": 1500,
-  "n_noise": 375
+  "0.7": {
+   "recall": 0.8856,
+   "fa_rate_conf": 0.027333333333333334,
+   "fa_rate_conf_rand": 0.009333333333333334,
+   "fa_rate_speech": 0.0006666666666666666,
+   "fa_rate_noise": 0.0,
+   "fa_per_hour_stream": 16.994727798766732,
+   "fa_per_hour_stream_speech": 1.9942751147530486
+  },
+  "0.8": {
+   "recall": 0.8656,
+   "fa_rate_conf": 0.019333333333333334,
+   "fa_rate_conf_rand": 0.008,
+   "fa_rate_speech": 0.0006666666666666666,
+   "fa_rate_noise": 0.0,
+   "fa_per_hour_stream": 16.994727798766732,
+   "fa_per_hour_stream_speech": 0.0
+  },
+  "0.9": {
+   "recall": 0.82,
+   "fa_rate_conf": 0.016666666666666666,
+   "fa_rate_conf_rand": 0.006,
+   "fa_rate_speech": 0.0006666666666666666,
+   "fa_rate_noise": 0.0,
+   "fa_per_hour_stream": 15.995037928251042,
+   "fa_per_hour_stream_speech": 0.0
+  },
+  "0.95": {
+   "recall": 0.7696,
+   "fa_rate_conf": 0.014,
+   "fa_rate_conf_rand": 0.005333333333333333,
+   "fa_rate_speech": 0.0006666666666666666,
+   "fa_rate_noise": 0.0,
+   "fa_per_hour_stream": 14.995348057735352,
+   "fa_per_hour_stream_speech": 0.0
+  },
+  "0.98": {
+   "recall": 0.6976,
+   "fa_rate_conf": 0.011333333333333334,
+   "fa_rate_conf_rand": 0.005333333333333333,
+   "fa_rate_speech": 0.0006666666666666666,
+   "fa_rate_noise": 0.0,
+   "fa_per_hour_stream": 13.995658187219663,
+   "fa_per_hour_stream_speech": 0.0
+  }
  },
  "hey_grok_bot": {
   "0.3": {
-   "recall": 0.9888,
-   "fa_rate_conf": 0.0006666666666666666,
-   "fa_rate_conf_rand": 0.002,
-   "fa_rate_speech": 0.0013333333333333333,
+   "recall": 0.9912,
+   "fa_rate_conf": 0.0,
+   "fa_rate_conf_rand": 0.0006666666666666666,
+   "fa_rate_speech": 0.0006666666666666666,
    "fa_rate_noise": 0.0,
    "fa_rate_hey_grok_alone": 0.0,
-   "fa_rate_hey_grok_alone_rand": 0.001,
-   "false_accepts_per_hour_stream": 90.9717782169278,
-   "false_accepts_per_hour_plain_speech": 89.74238016388719
+   "fa_rate_hey_grok_alone_rand": 0.0,
+   "fa_per_hour_stream": 5.998139223094141,
+   "fa_per_hour_stream_speech": 9.971375573765243
   },
   "0.5": {
-   "recall": 0.988,
-   "fa_rate_conf": 0.0006666666666666666,
-   "fa_rate_conf_rand": 0.0013333333333333333,
-   "fa_rate_speech": 0.0013333333333333333,
+   "recall": 0.9904,
+   "fa_rate_conf": 0.0,
+   "fa_rate_conf_rand": 0.0006666666666666666,
+   "fa_rate_speech": 0.0,
    "fa_rate_noise": 0.0,
    "fa_rate_hey_grok_alone": 0.0,
-   "fa_rate_hey_grok_alone_rand": 0.001,
-   "false_accepts_per_hour_stream": 85.97332886434936,
-   "false_accepts_per_hour_plain_speech": 79.77100459012195
+   "fa_rate_hey_grok_alone_rand": 0.0,
+   "fa_per_hour_stream": 4.998449352578451,
+   "fa_per_hour_stream_speech": 9.971375573765243
   },
   "0.7": {
-   "recall": 0.9864,
-   "fa_rate_conf": 0.0006666666666666666,
-   "fa_rate_conf_rand": 0.0013333333333333333,
-   "fa_rate_speech": 0.0013333333333333333,
+   "recall": 0.9896,
+   "fa_rate_conf": 0.0,
+   "fa_rate_conf_rand": 0.0006666666666666666,
+   "fa_rate_speech": 0.0,
    "fa_rate_noise": 0.0,
    "fa_rate_hey_grok_alone": 0.0,
-   "fa_rate_hey_grok_alone_rand": 0.001,
-   "false_accepts_per_hour_stream": 76.97612002970814,
-   "false_accepts_per_hour_plain_speech": 69.7996290163567
+   "fa_rate_hey_grok_alone_rand": 0.0,
+   "fa_per_hour_stream": 4.998449352578451,
+   "fa_per_hour_stream_speech": 7.9771004590121946
+  },
+  "0.8": {
+   "recall": 0.9896,
+   "fa_rate_conf": 0.0,
+   "fa_rate_conf_rand": 0.0006666666666666666,
+   "fa_rate_speech": 0.0,
+   "fa_rate_noise": 0.0,
+   "fa_rate_hey_grok_alone": 0.0,
+   "fa_rate_hey_grok_alone_rand": 0.0,
+   "fa_per_hour_stream": 4.998449352578451,
+   "fa_per_hour_stream_speech": 5.982825344259146
   },
   "0.9": {
-   "recall": 0.984,
+   "recall": 0.9888,
    "fa_rate_conf": 0.0,
-   "fa_rate_conf_rand": 0.0013333333333333333,
-   "fa_rate_speech": 0.0013333333333333333,
+   "fa_rate_conf_rand": 0.0006666666666666666,
+   "fa_rate_speech": 0.0,
    "fa_rate_noise": 0.0,
    "fa_rate_hey_grok_alone": 0.0,
-   "fa_rate_hey_grok_alone_rand": 0.001,
-   "false_accepts_per_hour_stream": 57.982012489910026,
-   "false_accepts_per_hour_plain_speech": 61.822528557344505
+   "fa_rate_hey_grok_alone_rand": 0.0,
+   "fa_per_hour_stream": 4.998449352578451,
+   "fa_per_hour_stream_speech": 5.982825344259146
   },
-  "n_pos_test": 1250,
-  "n_conf": 1500,
-  "n_conf_rand": 1500,
-  "n_speech": 1500,
-  "n_noise": 375,
-  "n_hey_grok_alone": 1250,
-  "n_hey_grok_alone_rand": 1000
+  "0.95": {
+   "recall": 0.988,
+   "fa_rate_conf": 0.0,
+   "fa_rate_conf_rand": 0.0006666666666666666,
+   "fa_rate_speech": 0.0,
+   "fa_rate_noise": 0.0,
+   "fa_rate_hey_grok_alone": 0.0,
+   "fa_rate_hey_grok_alone_rand": 0.0,
+   "fa_per_hour_stream": 3.9987594820627606,
+   "fa_per_hour_stream_speech": 3.9885502295060973
+  },
+  "0.98": {
+   "recall": 0.9856,
+   "fa_rate_conf": 0.0,
+   "fa_rate_conf_rand": 0.0006666666666666666,
+   "fa_rate_speech": 0.0,
+   "fa_rate_noise": 0.0,
+   "fa_rate_hey_grok_alone": 0.0,
+   "fa_rate_hey_grok_alone_rand": 0.0,
+   "fa_per_hour_stream": 3.9987594820627606,
+   "fa_per_hour_stream_speech": 1.9942751147530486
+  }
+ },
+ "combined": {
+  "0.5": {
+   "fa_per_hour_stream": 22.992867021860874,
+   "fa_per_hour_stream_speech": 13.95992580327134
+  },
+  "0.7": {
+   "fa_per_hour_stream": 19.993797410313803,
+   "fa_per_hour_stream_speech": 9.971375573765243
+  },
+  "0.8": {
+   "fa_per_hour_stream": 19.993797410313803,
+   "fa_per_hour_stream_speech": 5.982825344259146
+  },
+  "0.9": {
+   "fa_per_hour_stream": 18.99410753979811,
+   "fa_per_hour_stream_speech": 5.982825344259146
+  },
+  "0.95": {
+   "fa_per_hour_stream": 16.994727798766732,
+   "fa_per_hour_stream_speech": 3.9885502295060973
+  },
+  "0.98": {
+   "fa_per_hour_stream": 15.995037928251042,
+   "fa_per_hour_stream_speech": 1.9942751147530486
+  }
  }
 }

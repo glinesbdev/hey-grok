@@ -15,9 +15,9 @@ it falls back to an xAI API answer screen. See [ARCHITECTURE.md](ARCHITECTURE.md
 
 The wake word runs fully on-device with **[openWakeWord](https://github.com/dscripka/openWakeWord)**
 models on **ONNX Runtime Mobile**. No account or key is needed. The custom models were trained
-from synthetic speech; see [MODELS.md](MODELS.md) for metrics, licenses, known limitations (high false-accept rate on continuous speech in v1) and how to retrain
-(`training/run.sh`). The detection threshold is configurable in `OpenWakeWordEngine`
-(default 0.5; raise it to reduce false accepts).
+from synthetic speech; see [MODELS.md](MODELS.md) for metrics, licenses, known limitations (synthetic-only training data) and how to retrain
+(`training/run.sh`). Thresholds and "patience" (how many 80 ms frames a score must stay high) are configurable in `WakeDecider`.
+The defaults (0.7 / 0.9, patience 5) give about 92 % / 99 % recall and 0–3 false accepts per hour on held-out synthetic speech.
 
 ## Appearance
 
