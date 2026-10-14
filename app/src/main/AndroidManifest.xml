@@ -24,6 +24,8 @@
     </queries>
 
     <application
+        android:icon="@mipmap/ic_launcher"
+        android:roundIcon="@mipmap/ic_launcher_round"
         android:allowBackup="false"
         android:label="Hey Grok"
         android:theme="@style/Theme.HeyGrok">
@@ -85,7 +87,7 @@
         <service
             android:name=".tile.ListeningTileService"
             android:exported="true"
-            android:icon="@android:drawable/ic_btn_speak_now"
+            android:icon="@drawable/ic_stat_mic"
             android:label="Hey Grok"
             android:permission="android.permission.BIND_QUICK_SETTINGS_TILE">
             <intent-filter>

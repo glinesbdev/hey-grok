@@ -106,7 +106,7 @@ class WakeWordService : Service() {
             PendingIntent.FLAG_IMMUTABLE
         )
         return NotificationCompat.Builder(this, CHANNEL)
-            .setSmallIcon(android.R.drawable.ic_btn_speak_now)
+            .setSmallIcon(dev.glinesb.heygrok.R.drawable.ic_stat_mic)
             .setContentTitle("Hey Grok is listening")
             .setContentText("Say \"Hey Grok\" or \"Hey Grok Bot\"")
             .setOngoing(true)

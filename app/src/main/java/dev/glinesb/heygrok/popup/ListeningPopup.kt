@@ -182,7 +182,7 @@ object ListeningPopup {
             lastPost = now; lastText = text
             val open = PendingIntent.getActivity(c, 0, Intent(c, MainActivity::class.java), PendingIntent.FLAG_IMMUTABLE)
             val n = NotificationCompat.Builder(c, CHANNEL)
-                .setSmallIcon(android.R.drawable.ic_btn_speak_now)
+                .setSmallIcon(dev.glinesb.heygrok.R.drawable.ic_stat_mic)
                 .setContentTitle(m.title).setContentText(text)
                 .setStyle(NotificationCompat.BigTextStyle().bigText(text))
                 .setPriority(NotificationCompat.PRIORITY_HIGH).setCategory(NotificationCompat.CATEGORY_STATUS)

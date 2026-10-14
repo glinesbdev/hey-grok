@@ -1,5 +1,7 @@
 # Hey Grok
 
+<p align="center"><img src="docs/icon-512.png" width="160" alt="Hey Grok icon"></p>
+
 A native Android starter (Kotlin, Jetpack Compose, minSdk 29, targetSdk 35) that listens
 for **“Hey Grok”** / **“Hey Grok Bot”**, captures your question, and hands it to the
 **Grok** (`ai.x.grok`) or **Grok Bot** (`ai.x.grok.bot`) app. If neither is installed,
@@ -163,3 +165,7 @@ including as part of a paid product or service. This summary isn't legal advice;
 Third-party components keep their own licenses: the openWakeWord feature models are CC BY-NC-SA 4.0,
 ONNX Runtime is MIT, other libraries are Apache-2.0, and the training voices require CC BY 4.0 attribution.
 See [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
+
+## App icon
+
+The icon is an adaptive vector icon in `res/mipmap-anydpi-v26` with a solid black background, a foreground mic, sound ripples and a violet accent, and a monochrome layer for Android 13+ themed icons. The PNGs in `mipmap-*dpi` are legacy fallbacks. `docs/icon.svg` is the matching SVG; `docs/icon-512.png` is its 512 px render.
