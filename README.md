@@ -32,4 +32,4 @@ it falls back to an xAI API answer screen. See [ARCHITECTURE.md](ARCHITECTURE.md
 | xAI fallback (`XaiClient`) | Minimal: blocking, no streaming/history |
 | Default assistant role (VoiceInteractionService) | Documented only |
 
-CI: the workflow lives in `ci/android.yml` for now. Move it to `.github/workflows/` to turn it on (the push token lacked the `workflow` scope).
+CI: `.github/workflows/android.yml` runs `./gradlew assembleDebug` on every push/PR.
