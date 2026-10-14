@@ -80,6 +80,7 @@ private fun HomeScreen() {
             )
         }
         Text("Status: ${state.status}")
+        state.partial?.let { Text("Hearing: “$it”", style = MaterialTheme.typography.bodyLarge) }
 
         Text("Detected apps", style = MaterialTheme.typography.titleMedium)
         listOf(AppRouter.GROK, AppRouter.GROK_BOT).forEach { t ->

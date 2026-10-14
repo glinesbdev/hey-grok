@@ -52,6 +52,23 @@ your question, and plays `response.output_audio.delta` through `AudioTrack`.
 in Settings to go back to the free path: on-device speech-to-text, then the Grok / Grok Bot app.
 The same key also powers the text fallback screen used when neither app is installed.
 
+## Troubleshooting
+
+Logs for the whole pipeline go to one tag:
+
+```bash
+adb logcat -s HeyGrok
+```
+
+You'll see `wake: score …` lines while scores are high, then `wake: DETECTED`, `wake: AudioRecord released`,
+the recognizer callbacks (`stt[on-device]: onReadyForSpeech`, `onPartialResults`, `onResults` or `onError <code> (<name>)`),
+and `router: …`. If the on-device recognizer fails (for example, the language pack isn't downloaded), the app
+retries with the default recognizer. If nothing is heard within 12 s, it goes back to wake-word listening and
+the error appears on the main screen.
+
+On Pixels, speech recognition comes from Speech Services by Google / Android System Intelligence. If recognition never
+starts, make sure that app is updated and the offline language pack for your language is downloaded.
+
 ## Status
 
 | Piece | State |

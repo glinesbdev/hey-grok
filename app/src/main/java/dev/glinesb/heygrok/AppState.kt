@@ -10,6 +10,7 @@ object AppState {
     data class State(
         val listening: Boolean = false,
         val status: String = "Idle",
+        val partial: String? = null,
         val lastQuestion: String? = null,
         val lastResult: String? = null,
     )

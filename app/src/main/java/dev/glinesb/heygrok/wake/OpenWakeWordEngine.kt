@@ -6,6 +6,7 @@ import android.media.AudioFormat
 import android.media.AudioRecord
 import android.media.MediaRecorder
 import android.util.Log
+import dev.glinesb.heygrok.HgLog
 
 /**
  * openWakeWord on ONNX Runtime Mobile. Reads 16 kHz mono PCM with AudioRecord on a background
@@ -48,8 +49,11 @@ class OpenWakeWordEngine(
         val decider = WakeDecider(grokThreshold, botThreshold)
         thread = Thread({
             val frame = ShortArray(OwwPipeline.FRAME)
+            var detected: WakePhrase? = null
+            var frames = 0L
             try {
                 rec.startRecording()
+                HgLog.i("wake: listening (AudioRecord started, ${OwwPipeline.SAMPLE_RATE} Hz)")
                 while (running) {
                     var n = 0
                     while (n < frame.size && running) {
@@ -59,16 +63,20 @@ class OpenWakeWordEngine(
                     }
                     if (!running) break
                     val scores = p.process(frame) ?: continue
-                    decider.update(scores)?.let { phrase ->
-                        running = false
-                        onWake(phrase)
-                    }
+                    frames++
+                    val top = scores.maxByOrNull { it.value }
+                    if (top != null && top.value >= 0.3f) HgLog.d("wake: score ${top.key}=${"%.3f".format(top.value)}")
+                    else if (frames % 125 == 0L) HgLog.d("wake: alive, frames=$frames")  // every ~10 s
+                    decider.update(scores)?.let { phrase -> detected = phrase; running = false }
                 }
             } catch (e: Exception) {
-                Log.e(TAG, "wake loop", e); running = false; onError(e)
+                HgLog.e("wake: loop error", e); running = false; onError(e)
             } finally {
-                rec.stop(); rec.release()
+                // Release the mic BEFORE notifying, so SpeechRecognizer / Grok Voice can open it.
+                runCatching { rec.stop() }; rec.release()
+                HgLog.i("wake: AudioRecord released")
             }
+            detected?.let { HgLog.i("wake: DETECTED $it"); onWake(it) }
         }, "oww-wake").apply { start() }
     }
 

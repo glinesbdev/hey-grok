@@ -6,11 +6,11 @@ plugins {
 
 android {
     namespace = "dev.glinesb.heygrok"
-    compileSdk = 35
+    compileSdk = 36
     defaultConfig {
         applicationId = "dev.glinesb.heygrok"
         minSdk = 29
-        targetSdk = 35
+        targetSdk = 36
         versionCode = 1
         versionName = "0.1.0"
     }

@@ -15,6 +15,7 @@ import androidx.core.app.NotificationCompat
 import androidx.core.app.ServiceCompat
 import androidx.core.content.ContextCompat
 import dev.glinesb.heygrok.AppState
+import dev.glinesb.heygrok.HgLog
 import dev.glinesb.heygrok.MainActivity
 import dev.glinesb.heygrok.router.AppRouter
 import dev.glinesb.heygrok.settings.SecureSettings
@@ -69,7 +70,8 @@ class WakeWordService : Service() {
     }
 
     private fun listenForWakeWord() {
-        AppState.update { it.copy(listening = true, status = "Listening for \"Hey Grok\"") }
+        HgLog.i("service: listening for wake word")
+        AppState.update { st -> st.copy(listening = true, status = if (st.status.contains("again")) st.status else "Listening for \"Hey Grok\"") }
         engine.start(
             onWake = { phrase -> onWake(phrase) },
             onError = { e -> AppState.update { it.copy(status = "Wake word error: ${e.message}") } },
@@ -81,18 +83,23 @@ class WakeWordService : Service() {
         engine.stop()
         val key = settings.apiKey
         if (key != null) { startGrokVoice(key); return }   // optional paid mode
-        AppState.update { it.copy(status = "Wake ($phrase) — speak your question") }
-        speech.capture(
-            onResult = { question ->
-                AppState.update { it.copy(lastQuestion = question, status = "Routing…") }
-                router.route(question, phrase)
+        AppState.update { it.copy(status = "Wake ($phrase) — starting speech recognizer…", partial = null) }
+        speech.capture(object : SpeechCapture.Callback {
+            override fun onListening(engine: String) =
+                AppState.update { it.copy(status = "Speak your question ($engine recognizer)…") }
+            override fun onPartial(text: String) = AppState.update { it.copy(partial = text) }
+            override fun onResult(text: String) {
+                HgLog.i("service: question='$text' → routing ($phrase)")
+                AppState.update { it.copy(lastQuestion = text, partial = null, status = "Routing…") }
+                router.route(text, phrase)
                 listenForWakeWord()
-            },
-            onError = { msg ->
-                AppState.update { it.copy(status = "Speech error: $msg") }
+            }
+            override fun onError(message: String) {
+                HgLog.w("service: speech failed: $message — resuming wake word")
+                AppState.update { it.copy(status = "$message — say \"Hey Grok\" again", partial = null) }
                 listenForWakeWord()
-            },
-        )
+            }
+        })
     }
 
     /** Paid Grok Voice turn with the user's own key; afterwards resume wake-word listening. */

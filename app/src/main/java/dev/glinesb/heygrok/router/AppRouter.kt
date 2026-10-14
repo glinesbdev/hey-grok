@@ -3,7 +3,7 @@ package dev.glinesb.heygrok.router
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
-import android.util.Log
+import dev.glinesb.heygrok.HgLog
 import dev.glinesb.heygrok.settings.SecureSettings
 import dev.glinesb.heygrok.ui.ResultActivity
 import dev.glinesb.heygrok.wake.WakePhrase
@@ -63,9 +63,9 @@ class AppRouter(private val context: Context) {
     }
 
     private fun start(intent: Intent): Boolean = try {
-        context.startActivity(intent); true
+        HgLog.i("router: start $intent"); context.startActivity(intent); true
     } catch (e: Exception) {
-        Log.w("AppRouter", "startActivity failed: $intent", e); false
+        HgLog.w("router: startActivity failed: $intent", e); false
     }
 
     companion object {
