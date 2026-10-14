@@ -23,7 +23,7 @@
     <application
         android:allowBackup="false"
         android:label="Hey Grok"
-        android:theme="@android:style/Theme.Material.Light.NoActionBar">
+        android:theme="@style/Theme.HeyGrok">
 
         <activity
             android:name=".MainActivity"
@@ -37,8 +37,7 @@
 
         <activity
             android:name=".ui.ResultActivity"
-            android:exported="false"
-            android:theme="@android:style/Theme.Material.Light.Dialog" />
+            android:exported="false" />
 
         <activity
             android:name=".settings.SettingsActivity"

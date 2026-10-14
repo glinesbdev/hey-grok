@@ -3,7 +3,11 @@ package dev.glinesb.heygrok.settings
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.activity.enableEdgeToEdge
+import dev.glinesb.heygrok.ui.theme.HeyGrokTheme
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -17,16 +21,17 @@ import androidx.compose.ui.unit.dp
 /** Optional Grok Voice mode: enter your own xAI key (stored encrypted) and pick a voice. */
 class SettingsActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
+        enableEdgeToEdge()
         super.onCreate(savedInstanceState)
         val settings = SecureSettings(this)
         setContent {
-            MaterialTheme {
+            HeyGrokTheme {
                 Surface {
                     var hasKey by remember { mutableStateOf(settings.hasApiKey) }
                     var input by remember { mutableStateOf("") }
                     var voice by remember { mutableStateOf(settings.voice) }
                     var inApp by remember { mutableStateOf(settings.alwaysAnswerInApp) }
-                    Column(Modifier.fillMaxSize().padding(24.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Column(Modifier.fillMaxSize().safeDrawingPadding().verticalScroll(rememberScrollState()).padding(24.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Column(Modifier.weight(1f)) {
                                 Text("Always answer in this app", style = MaterialTheme.typography.titleMedium)

@@ -5,7 +5,12 @@ import android.content.Intent
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.activity.enableEdgeToEdge
+import dev.glinesb.heygrok.ui.theme.HeyGrokTheme
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.safeDrawingPadding
+import androidx.compose.material3.Surface
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -28,22 +33,25 @@ import dev.glinesb.heygrok.xai.XaiClient
 /** Fallback "answer overlay" when neither Grok app is installed. */
 class ResultActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
+        enableEdgeToEdge()
         super.onCreate(savedInstanceState)
         val question = intent.getStringExtra(EXTRA_Q).orEmpty()
         setContent {
-            MaterialTheme {
+            HeyGrokTheme {
                 var answer by remember { mutableStateOf<String?>(null) }
                 LaunchedEffect(question) {
                     val a = XaiClient(SecureSettings(this@ResultActivity).apiKey).ask(question)
                     answer = a
                     AppState.update { it.copy(lastResult = a) }
                 }
-                Column(Modifier.padding(20.dp).verticalScroll(rememberScrollState())) {
+                Surface(Modifier.fillMaxSize()) {
+                Column(Modifier.safeDrawingPadding().padding(20.dp).verticalScroll(rememberScrollState())) {
                     Text(question, style = MaterialTheme.typography.titleMedium)
                     Text(" ")
                     answer?.let { Text(it) } ?: CircularProgressIndicator()
                     Text(" ")
                     MissingAppButtons(remember { AppRouter(this@ResultActivity) })
+                }
                 }
             }
         }

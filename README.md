@@ -19,6 +19,13 @@ from synthetic speech; see [MODELS.md](MODELS.md) for metrics, licenses, known l
 (`training/run.sh`). The detection threshold is configurable in `OpenWakeWordEngine`
 (default 0.5; raise it to reduce false accepts).
 
+## Appearance
+
+The app follows the system theme. It goes light or dark with the system setting (`isSystemInDarkTheme()`).
+On Android 12+ it uses **Material You dynamic color** (wallpaper-based), and on Android 10–11 it uses
+branded fallback color schemes. A DayNight window theme keeps the splash screen and window background
+in step, and the layout is edge-to-edge with system-bar icons that switch contrast automatically.
+
 ## Hand-off to Grok / Grok Bot
 
 - When a question is captured, Hey Grok opens **Grok** (`ai.x.grok`) or **Grok Bot** (`ai.x.grok.bot`) if it's installed.
