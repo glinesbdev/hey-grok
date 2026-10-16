@@ -10,7 +10,7 @@ The components below are **not** covered by that license. Each keeps its own lic
 | Test clips | `app/src/test/resources/clips/` | Synthetic, CC BY 4.0-derived | Same voices as below. |
 | ONNX Runtime (`onnxruntime-android`, `onnxruntime`) | Gradle dependency | MIT | © Microsoft Corporation |
 | OkHttp | Gradle dependency | Apache-2.0 | © Square, Inc. |
-| AndroidX / Jetpack Compose / security-crypto | Gradle dependencies | Apache-2.0 | © The Android Open Source Project |
+| AndroidX / Jetpack Compose / security-crypto / Browser (Custom Tabs) | Gradle dependencies | Apache-2.0 | © The Android Open Source Project |
 | Kotlin, kotlinx.coroutines | Gradle dependencies | Apache-2.0 | © JetBrains |
 | Piper TTS (`piper-tts`) | training tool only, not shipped | GPL-3.0 | Used only to generate training audio. |
 

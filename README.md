@@ -40,8 +40,17 @@ in step, and the layout is edge-to-edge with system-bar icons that switch contra
 
 ## Optional: Grok Voice mode (paid, your own xAI key)
 
-Open **Settings** in the app, paste your own [xAI API key](https://console.x.ai/), and pick a voice
-(eve, ara, rex, sal, leo). The key is stored only on the device, encrypted with
+Open **Settings** in the app, paste your own xAI API key, and pick a voice (eve, ara, rex, sal, leo).
+**How to get a key** (also under "How do I get this?" in Settings):
+
+1. Sign up or log in at <https://console.x.ai> and verify your email.
+2. Add credits under Billing (the API is pay-as-you-go).
+3. Open the API Keys page, <https://console.x.ai/team/default/api-keys> (Settings → **Get a key** goes straight
+   there), and create a new key.
+4. Copy the key (it's shown only once), paste it in Settings and tap **Save key**.
+
+Cost: paid, billed to your own xAI account (see below). API docs: <https://docs.x.ai/developers/quickstart>.
+Settings links open in a Custom Tab (or your browser). The key is stored only on the device, encrypted with
 `EncryptedSharedPreferences` under an Android Keystore master key. It's never put in BuildConfig or
 `local.properties`, never logged, and backups are disabled.
 

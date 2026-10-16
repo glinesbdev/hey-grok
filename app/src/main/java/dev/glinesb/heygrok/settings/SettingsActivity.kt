@@ -7,6 +7,9 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import dev.glinesb.heygrok.ui.theme.HeyGrokTheme
+import dev.glinesb.heygrok.ui.ApiKeyHelp
+import dev.glinesb.heygrok.ui.XaiKeyLinks
+import dev.glinesb.heygrok.ui.openLink
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -136,6 +139,14 @@ class SettingsActivity : ComponentActivity() {
                                 settings.apiKey = null; hasKey = false
                             }) { Text("Remove key") }
                         }
+                        OutlinedButton(onClick = { openLink(this@SettingsActivity, XaiKeyLinks.API_KEYS) }) { Text("Get a key") }
+                        ApiKeyHelp(
+                            steps = XaiKeyLinks.STEPS,
+                            costNote = "Paid: Grok Voice is billed to your own xAI account (about $0.08 per minute of voice), " +
+                                "so you need credits loaded. Hey Grok adds no fee. Without a key the free path is used.",
+                            docsLabel = "xAI API docs (docs.x.ai)",
+                            docsUrl = XaiKeyLinks.DOCS,
+                        )
                         Text("Voice", style = MaterialTheme.typography.titleMedium)
                         SecureSettings.VOICES.forEach { v ->
                             Row(
